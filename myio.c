@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <stdbool.h>
 #include <string.h>
 #include "myio.h" 
@@ -15,16 +16,31 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 	 *	- the size specified by the first myread call
 	 *we will pass that struct through on every call of myread so that it knows where to start adding to the buffer from the file
 	 */
+	
+	if (FV -> flag_val == 1 || FV -> flag_val == 65) { //if a WRONLY is specified
+		perror("No read access");
+		exit(-1);
+	}
+
+	
 
 	int bytes_so_far = FV -> bytes_read;
 
-	printf("Count: %ld, Bytes: %d\n", count, bytes_so_far);
+	//printf("Count: %ld, Bytes: %d\n", count, bytes_so_far);
+	if ((FV -> bytes_read_tot) == (FV -> size)) {
+		printf("DONE\n");
+		return 0;
+	}
 
+	if ((FV -> bytes_read_tot) + count >= (FV -> size)) {
+		printf("Nearing the end\n");
+		count = (FV -> size) - (FV -> bytes_read_tot);
+	}
 
 	if (FV->not_read_yet) {
 		read(FV->fd, FV->hidden_buf, 100);
-		printf("FIRST READ SYSCALL\n");
-		memcpy(buf, FV->hidden_buf, count); 
+		//printf("FIRST READ SYSCALL\n");
+		memcpy(buf, FV->hidden_buf, count + 1); 
 		FV -> bytes_read += count;
 		FV -> bytes_read_tot += count;
 		FV -> not_read_yet = false;
@@ -32,6 +48,8 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 
 	}
 	else if (((FV -> bytes_read) + count) >= (FV -> buf_size)) {
+
+		printf("FINAL STRETCH\n");
 
 	//	FV->buf_size += 100;
 
@@ -52,23 +70,24 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 
 	//	printf("Point in hidden_buf: %s\n", FV->hidden_buf + FV->bytes_read);
 
-	//	printf("Bytes read: %d\n", FV->bytes_read);
+		printf("Bytes read: %d %s\n", FV->bytes_read, FV->hidden_buf + FV->bytes_read);
 		memcpy(buf, FV->hidden_buf + FV->bytes_read, leftovers); //copy the few bits that will get lost in between the myread and the syscall to buf
+		printf("First memcpy: %s\n", (char *) buf);
+
 		//printf("Writing out the leftover buffer:\n");
 		//write(1, buf, 2);
 		//
 		FV->bytes_read += leftovers;//read two more bytes
 					    //
-		if (FV->bytes_read >= FV->buf_size) {
-			FV->bytes_read = 0;
-		}
-		
 
+		memset(FV->hidden_buf, '\0', 100);
 		read(FV->fd, FV->hidden_buf, 100);
 
+		printf("Hidden Buf: %s\n", FV->hidden_buf);
+		
 		int carryover = count - leftovers;
 
-		printf("READ SYSCALL\n");
+		//printf("CARRYOVER: %d\n", carryover);
 		memcpy(((char *) buf) + leftovers, FV->hidden_buf, carryover);
 		printf("memcpy: %s\n", (char *) buf);
 
@@ -77,17 +96,20 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 
 	}
 	else {
-		memcpy(buf, FV->hidden_buf + FV->bytes_read, count); //copy however many bytes the user specifies from the hidden buf into the user buf. We do count + 1 to account for
-									 //null char
+		printf("Getting to the end\n");
+		memcpy(buf, FV->hidden_buf + FV->bytes_read, count); //copy however many bytes the user specifies from the hidden buf into the user buf. We do count + 1 to account for	//null char
+								     
+		//printf("WHY\n");
 		FV -> bytes_read += count;
 		FV -> bytes_read_tot += count;
 
 		printf("memcpy: %s\n", (char *) buf);
+		//printf("It's here\n");
 	}
 
-	return ((FV -> bytes_read)); //return the number of bytes read on this specific call
+//use my bytes_read_tot as a file offset to see if I am about to get to end of file.
 
-
+	return (count); //return the number of bytes read on this specific call
 
 	/*
 	if (FV->not_read_yet || ((FV -> bytes_read) + count) >= (FV -> buf_size)) { //if the buf2 is empty or the user buf is full, do the syscall
@@ -147,6 +169,13 @@ struct FILER *myopen(const char *pathname, int flags) {
 	 * Step 3: 
 	 * */
 
+	struct stat *st = malloc(sizeof(struct stat));
+	stat(pathname, st);
+
+	//char* flag_string = (char *) flags;
+
+	printf("FLAG: %d\n", flags);
+
 	int fd = open(pathname, flags);
 
 	printf("FILE DESCRIPTOR: %d\n", fd);
@@ -160,7 +189,8 @@ struct FILER *myopen(const char *pathname, int flags) {
 	FV -> bytes_writ = 0;
 	FV -> not_read_yet = true;
 	FV -> not_writ_yet = true;
-
+	FV -> flag_val = flags;
+	FV -> size = st -> st_size;
 
 	return FV;
 }

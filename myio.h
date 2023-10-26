@@ -9,6 +9,11 @@
 #ifndef __MY_IO_H
 #define __MY_IO_H
 
+//#define O_CREAT  1000000
+//#define O_WRONLY 1
+//#define O_RDONLY 10
+//#define O_RDWR   100
+
 struct FILER {
 	int fd;
 	char *hidden_buf;
@@ -18,6 +23,9 @@ struct FILER {
 	bool not_read_yet;
 	bool not_writ_yet;
 	int bytes_writ;
+	int flag_val;
+	char flag_str[7]; //will need it as a string so I can loop through it and see which digits are 1. It will never be a string longer than 7
+	int size;
 };
 
 struct FILER *myopen(const char *pathname, int flags);
