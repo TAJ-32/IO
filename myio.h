@@ -20,6 +20,7 @@ struct FILER {
 	int buf_size;
 	int bytes_read;
 	int bytes_read_tot;
+	int bytes_read_last;
 	bool not_read_yet;
 	bool not_writ_yet;
 	int bytes_writ;

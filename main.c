@@ -18,30 +18,27 @@ int main(int argc, char *argv[]) {
 
 	int n = myread(FV, buf, 10); 
 	printf("first read done\n");
-	printf("RETURN: %d\n", n);
-	write(FV2->fd, buf, 10);
+	printf("RETURN: %d\n", n);;
 
 	n = myread(FV, buf, 40);
 	printf("second read done\n");
 	printf("RETURN: %d\n", n);
-	write(FV2->fd, buf, 40);
 
 	n = myread(FV, buf, 48);
 	printf("third read done\n");
 	printf("RETURN: %d\n", n);
-	write(FV2->fd, buf, 48);
 
-	n = myread(FV, buf, 32);
+	n = myread(FV, buf, 52);
 	printf("fourth read done\n");
 	printf("RETURN: %d\n", n);
-	write(FV2->fd, buf, 32);
 
 	n = myread(FV, buf, 30);
 	printf("fifth read done\n");
 	printf("RETURN: %d\n", n);
-	write(FV2->fd, buf, 30);
 	
 	printf("WE OUT\n");
+
+	write(FV2->fd, buf, 200);
 
 
 
