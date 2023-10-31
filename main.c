@@ -14,7 +14,11 @@ int main(int argc, char *argv[]) {
 
 	struct FILER *FV2 = myopen("/home/sartaj/Assignments/assignment2/Outfile.txt", O_WRONLY);
 
+	struct FILER *FV3 = myopen("/home/sartaj/Assignments/assignment2/Outfile2.txt", O_CREAT | O_RDWR);
+
 	char buf[256];
+
+	//buf = buf + FV->offset //this will start the buffer to where lseek told it to start at once we make lseek
 
 	int n = myread(FV, buf, 10); 
 	printf("first read done\n");
@@ -35,13 +39,21 @@ int main(int argc, char *argv[]) {
 	n = myread(FV, buf, 30);
 	printf("fifth read done\n");
 	printf("RETURN: %d\n", n);
+
+	n = myread(FV, buf, 20);
+
+	n = myread(FV, buf, 50);
 	
 	printf("WE OUT\n");
 
-	write(FV2->fd, buf, 200);
+	write(FV2->fd, buf, 250);
 
-
-
+	mywrite(FV3, buf, 20);
+	mywrite(FV3, buf, 50);
+	mywrite(FV3, buf, 130);
+	printf("first 200 bytes\n");
+	mywrite(FV3, buf, 50);
+	printf("last 50\n");
 
 
 	//struct FILER *FV2 = myopen("/home/sartaj/Assignments/assignment2/Testfile.txt", O_CREAT);

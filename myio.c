@@ -21,80 +21,45 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		perror("No read access");
 		exit(-1);
 	}
-	//printf("Count: %ld, Bytes: %d\n", count, bytes_so_far);
+
 	if ((FV -> bytes_read_tot) == (FV -> size)) {
-		printf("DONE\n");
 		return 0;
 	}
 
 	if ((FV -> bytes_read_tot) + count >= (FV -> size)) {
-		//printf("Nearing the end: %d %ld\n", FV->bytes_read_tot, count);
 		count = (FV -> size) - (FV -> bytes_read_tot);
-		//printf("count: %ld\n", count);
 	}
 
 	if (FV->not_read_yet) {
 		read(FV->fd, FV->hidden_buf, FV->buf_size);
-		printf("FIRST READ SYSCALL\n");
 		memcpy(buf, FV->hidden_buf, count); 
 		FV -> bytes_read += count;
 		FV -> bytes_read_tot += count;
 		FV -> not_read_yet = false;
-		//printf("memcpy systcall: %s\n", (char *) buf);
-
 	}
 	else if (((FV -> bytes_read) + count) >= (FV -> buf_size)) {
 
-		printf("Reset Buffer Case\n");
-
-		//maybe change that you don't add bytes_read or bytes_read_tot in the actual read syscall
 		int leftovers = (FV -> buf_size) - (FV->bytes_read);
 
-
-		//printf("Before memcpy 1: buf: %s \nh_buf: %s \nbytes_read: %d \nleftovers: %d\n", (char *) buf, FV->hidden_buf, FV->bytes_read, leftovers);
-		//printf("Bytes read: %d %s\n", FV->bytes_read, FV->hidden_buf + FV->bytes_read);
 		memcpy((char *) buf + FV->bytes_read_tot, FV->hidden_buf + FV -> bytes_read, leftovers); //copy the few bits that will get lost in between the myread and the syscall to buf
-		//printf("First memcpy: %s\n", (char *) buf);
-		//printf("After memcpy 1: buf: %s \nh_buf: %s \nbytes_read: %d \nleftovers: %d\n", (char *) buf, FV->hidden_buf, FV->bytes_read, leftovers);
 
 		FV->bytes_read += leftovers;//read two more bytes
 		
-		printf("User buf at leftover: %s\n", (char *) buf);
 		memset(FV->hidden_buf, '\0', FV -> buf_size);
-		printf("Hidden buf after clear: %s\n", FV->hidden_buf);
 		read(FV->fd, FV->hidden_buf, FV -> buf_size);
-		printf("Hidden buf after new read: %s\n", FV->hidden_buf);
 		
 		int carryover = count - leftovers;
 
-		//printf("Before memcpy 2: buf: %s \nh_buf: %s \nbytes_read: %d \nleftovers: %d\n", (char *) buf + leftovers, FV->hidden_buf, FV->bytes_read, leftovers);
-
 		memcpy((char *) buf + FV->bytes_read_tot + leftovers, FV->hidden_buf, carryover);
-		printf("User buf at carryover: %s\n", (char *) buf);
-
-		//printf("After memcpy 2: buf: %s \nh_buf: %s \nbytes_read: %d \nleftovers: %d\n", (char *) buf, FV->hidden_buf, FV->bytes_read, leftovers);
-
-		//printf("memcpy: %s\n", (char *) buf);
 
 		FV -> bytes_read = carryover;
 		FV -> bytes_read_tot += count;
-
 	}
 	else {
-		printf("Default case\n");
-		//printf("Before memcpy: buf: %s \nh_buf: %s \nbytes_read: %d \ncount: %ld\n", (char *) buf, FV->hidden_buf, FV->bytes_read, count);	
-		printf("User buf before memcpy: %s\n", (char *) buf);
-		memcpy((char *) buf + FV->bytes_read_tot, FV->hidden_buf + FV->bytes_read, count); //copy however many bytes the user specifies from the hidden buf into the user buf. We do count + 1 to account for	null char
-		printf("User buf after memcpy: %s\n", (char *) buf);
+		memcpy((char *) buf + FV->bytes_read_tot, FV->hidden_buf + FV->bytes_read, count); //copy however many bytes the user specifies from the hidden buf into the user buf. We do count + 1 to account for null char
 								     
-		//printf("WHY\n");
 		FV -> bytes_read += count;
 		FV -> bytes_read_tot += count;
-
-		//printf("After memcpy: buf: %s \nh_buf: %s \nbytes_read: %d \ncount: %ld\n", (char *) buf, FV->hidden_buf, FV->bytes_read, count);
-
-		//printf("memcpy: %s\n", (char *) buf);
-		//printf("It's here\n");
 	}
 
 	FV -> bytes_read_last = count;
@@ -102,97 +67,92 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 //use my bytes_read_tot as a file offset to see if I am about to get to end of file.
 
 	return (count); //return the number of bytes read on this specific call
-
-
-	
 }
 
 ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many bytes we are writing
-							     //
-		if (FV -> flag_val == 1 || FV -> flag_val == 65) { //if a WRONLY is specified
-		perror("No read access");
+	if (FV -> flag_val == 0 || FV -> flag_val == 64) { //if a WRONLY is specified
+		perror("No write access");
 		exit(-1);
 	}
-
-	
-
-	//printf("Count: %ld, Bytes: %d\n", count, bytes_so_far);
-	if ((FV -> bytes_read_tot) == (FV -> size)) {
+	/*
+	if ((FV -> bytes_writ_tot) == (FV -> size)) {
 		printf("DONE\n");
 		return 0;
-	}
-
-	if ((FV -> bytes_read_tot) + count >= (FV -> size)) {
-		//printf("Nearing the end: %d %ld\n", FV->bytes_read_tot, count);
+	}*/
+	
+	/*//I think this is maybe not my job because the user has to make sure they aren't writing more than they allocated 
+	if ((FV -> bytes_writ_tot) + count >= (FV -> size)) {
 		count = (FV -> size) - (FV -> bytes_read_tot);
-		//printf("count: %ld\n", count);
-	}
+	}*/
 
-	if (FV->not_writ_yet) {
-		write(FV->fd, buf, 100);
-		//printf("FIRST READ SYSCALL\n");
-		memcpy(buf, FV->hidden_buf, count + 1); 
-		FV -> bytes_read += count;
-		FV -> bytes_read_tot += count;
-		FV -> not_read_yet = false;
-		//printf("memcpy: %s\n", (char *) buf);
+	printf("bytes_writ: %d\n", FV -> bytes_writ);
+	printf("bytes_writ_tot: %d\n", FV -> bytes_writ_tot);
 
-	}
-	else if (((FV -> bytes_read) + count) >= (FV -> buf_size)) {
+	if (((FV -> bytes_writ) + count) >= (FV -> buf_size)) {
 
-		printf("FINAL STRETCH\n");
+		printf("hidden_buf thus far: %s\n", FV->hidden_buf);
 
-		//maybe change that you don't add bytes_read or bytes_read_tot in the actual read syscall
-		int leftovers = (FV -> buf_size) - (FV->bytes_read);
+		int leftovers = (FV -> buf_size) - (FV -> bytes_writ);
+
+		memcpy(FV -> hidden_buf + FV -> bytes_writ, (char *) buf + FV->bytes_writ_tot, leftovers);//fill hidden_buf to its brim
+		printf("after leftover copy: %s\n", FV->hidden_buf);
 
 
-		printf("Before memcpy 1: buf: %s \nh_buf: %s \nbytes_read: %d \nleftovers: %d\n", (char *) buf, FV->hidden_buf, FV->bytes_read, leftovers);
-		//printf("Bytes read: %d %s\n", FV->bytes_read, FV->hidden_buf + FV->bytes_read);
-		memcpy(buf, FV->hidden_buf + FV -> bytes_read, leftovers); //copy the few bits that will get lost in between the myread and the syscall to buf
-		//printf("First memcpy: %s\n", (char *) buf);
-		printf("After memcpy 1: buf: %s \nh_buf: %s \nbytes_read: %d \nleftovers: %d\n", (char *) buf, FV->hidden_buf, FV->bytes_read, leftovers);
+		write(FV -> fd, FV->hidden_buf, FV -> buf_size); //write what is in the hidden_buf to the file
+		FV -> not_writ_yet = false;
+		memset(FV -> hidden_buf, '\0', FV -> buf_size); //clear the buffer
 
-		FV->bytes_read += leftovers;//read two more bytes
+		FV -> bytes_writ = 0; //after writing the leftovers, we want to set it back to 0
+		FV -> bytes_writ_tot += leftovers;
 
-
-		memset(FV->hidden_buf, '\0', 100);
-		read(FV->fd, FV->hidden_buf, 100);
-		
 		int carryover = count - leftovers;
 
-		printf("Before memcpy 2: buf: %s \nh_buf: %s \nbytes_read: %d \nleftovers: %d\n", (char *) buf + leftovers, FV->hidden_buf, FV->bytes_read, leftovers);
+		if (carryover >= FV -> buf_size) { //in the case that the user asked to write a substantial amount more than the bufsize when we were already close to the buffer being filled
+			while (carryover >= FV -> buf_size) {
+				printf("in loop\n");
+				leftovers = (FV -> buf_size);
+				memcpy(FV -> hidden_buf, (char *) buf + FV->bytes_writ_tot, leftovers);//fill hidden_buf to its brim
+				printf("loop leftover: %s\n", FV -> hidden_buf);
+				write(FV->fd, FV->hidden_buf, FV->buf_size);
 
-		memcpy(((char *) buf) + leftovers, FV->hidden_buf, carryover);
+				FV -> bytes_writ = 0;
+				FV -> bytes_writ_tot += leftovers;
 
-		printf("After memcpy 2: buf: %s \nh_buf: %s \nbytes_read: %d \nleftovers: %d\n", (char *) buf, FV->hidden_buf, FV->bytes_read, leftovers);
+				carryover = carryover - leftovers;
+				
+				memcpy(FV -> hidden_buf, (char *) buf + FV->bytes_writ_tot, carryover);
+				printf("loop carryover: %s\n", FV -> hidden_buf);
 
-		//printf("memcpy: %s\n", (char *) buf);
+				FV -> bytes_writ += carryover;
+				FV -> bytes_writ_tot += carryover;
+			}
+		}
+		else {
+			memcpy(FV -> hidden_buf, (char *) buf + FV->bytes_writ_tot, carryover);
+			printf("after carryover copy: %s\n", FV->hidden_buf);
 
-		FV -> bytes_read = carryover;
-		FV -> bytes_read_tot += count;
+			FV -> bytes_writ = carryover;
+
+			FV -> bytes_writ_tot += carryover;
+		}
 
 	}
 	else {
-		printf("Before memcpy: buf: %s \nh_buf: %s \nbytes_read: %d \ncount: %ld\n", (char *) buf, FV->hidden_buf, FV->bytes_read, count);
-		memcpy(buf, FV->hidden_buf + FV->bytes_read, count); //copy however many bytes the user specifies from the hidden buf into the user buf. We do count + 1 to account for	null char
-								     
-		//printf("WHY\n");
-		FV -> bytes_read += count;
-		FV -> bytes_read_tot += count;
+		printf("Hidden buf: %s\n", FV->hidden_buf);
 
-		printf("After memcpy: buf: %s \nh_buf: %s \nbytes_read: %d \ncount: %ld\n", (char *) buf, FV->hidden_buf, FV->bytes_read, count);
+		memcpy(FV -> hidden_buf + FV -> bytes_writ, (char *) buf + FV -> bytes_writ_tot, count);
 
-		//printf("memcpy: %s\n", (char *) buf);
-		//printf("It's here\n");
+		FV -> bytes_writ += count;
+		FV -> bytes_writ_tot += count;
 	}
 
-	FV -> bytes_read_last = count;
+	if (FV -> bytes_writ_tot == FV -> size && FV -> not_writ_yet == false) { //it needs to do the second write for the carrovered bytes after leftovers is done
+		write(FV -> fd, FV -> hidden_buf, FV -> buf_size);
+	}
 
-//use my bytes_read_tot as a file offset to see if I am about to get to end of file.
+	//use my bytes_read_tot as a file offset to see if I am about to get to end of file.
 
 	return (count); //return the number of bytes read on this specific call
-
-
 	
 /*	
 	int bytes_so_far = FV -> bytes_writ;
@@ -243,6 +203,7 @@ struct FILER *myopen(const char *pathname, int flags) {
 	FV -> bytes_read_tot = 0;
 	FV -> bytes_read_last = 0;
 	FV -> bytes_writ = 0;
+	FV -> bytes_writ_tot = 0;// file offset
 	FV -> not_read_yet = true;
 	FV -> not_writ_yet = true;
 	FV -> flag_val = flags;
