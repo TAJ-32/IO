@@ -76,13 +76,16 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 		exit(-1);
 	}
 
+	printf("bytes_writ1: %d\n", FV -> bytes_writ);
+	printf("bytes_writ_tot1: %d\n", FV -> bytes_writ_tot);
+	printf("hidden_buf1: %s\n", FV -> hidden_buf);
+
+
 	if (FV -> bytes_writ == 0) {
 		memset(FV -> hidden_buf, '\0', FV -> buf_size); //clear the buffer
 	}
 
 	if (((FV -> bytes_writ) + count) >= (FV -> buf_size)) {
-
-		printf("hidden_buf thus far: %s\n", FV->hidden_buf);
 
 		int leftovers = (FV -> buf_size) - (FV -> bytes_writ);
 
@@ -98,15 +101,11 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 		int carryover = count - leftovers;
 
 		if (carryover >= FV -> buf_size) { //in the case that the user asked to write a substantial amount more than the bufsize when we were already close to the buffer being filled
-			printf("HERE WE ARE\n");
 			while (carryover >= FV -> buf_size) {
-				printf("AGAINNNN\n");
 				int new_leftovers = (FV -> buf_size);
 				memcpy(FV -> hidden_buf, (char *) buf + FV->bytes_writ_tot, new_leftovers);//fill hidden_buf to its brim
 				write(FV->fd, FV->hidden_buf, FV->buf_size);
 
-				printf("hidden_buf aqui: %s\n", FV->hidden_buf);
-				
 				FV -> bytes_writ = 0;
 				FV -> bytes_writ_tot += new_leftovers;
 
@@ -118,13 +117,11 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 				FV -> bytes_writ_tot += new_carryover;
 
 				if (FV -> bytes_writ == FV -> buf_size) {
-					printf("WINGS \n");
 					FV -> bytes_writ = 0;
 					memset(FV -> hidden_buf, '\0', FV -> buf_size); //clear the buffer
 				}
 				carryover = new_carryover;
 			}
-			printf("got out of loop\n");
 		}
 		else {
 			memcpy(FV -> hidden_buf, (char *) buf + FV->bytes_writ_tot, carryover);
@@ -136,9 +133,6 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 
 	}
 	else {
-		printf("Total bytes written: %d\n", FV -> bytes_writ_tot);
-		printf("hidden buf at this last point: %s\n", FV -> hidden_buf);
-
 		memcpy(FV -> hidden_buf + FV -> bytes_writ, (char *) buf + FV -> bytes_writ_tot, count);
 
 		FV -> bytes_writ += count;
@@ -155,7 +149,16 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 }	
 
 ssize_t myflush(struct FILER *FV, int count) {
+	printf("bytes_writ2: %d\n", FV -> bytes_writ);
+	printf("bytes_writ_tot2: %d\n", FV -> bytes_writ_tot);
+	printf("hidden_buf2: %s\n", FV -> hidden_buf);
+
 	int n = write(FV -> fd, FV -> hidden_buf, count);
+
+	memset(FV->hidden_buf, '\0', FV -> buf_size);
+
+	FV -> bytes_writ = 0;
+	FV -> bytes_writ_tot = 0;
 
 	return n;
 }

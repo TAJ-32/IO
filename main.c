@@ -20,36 +20,25 @@ int main(int argc, char *argv[]) {
 
 	//buf = buf + FV->offset //this will start the buffer to where lseek told it to start at once we make lseek
 	
-//	int a = myseek(FV, 30, SEEK_SET);
+	//int a = myseek(FV, 30, SEEK_SET);
 
 	int n = myread(FV, buf, 10); 
-	printf("first read done\n");
-	printf("RETURN: %d\n", n);;
 
 	n = myread(FV, buf, 40);
-	printf("second read done\n");
-	printf("RETURN: %d\n", n);
 
 	n = myread(FV, buf, 48);
-	printf("third read done\n");
-	printf("RETURN: %d\n", n);
 
 	n = myread(FV, buf, 52);
-	printf("fourth read done\n");
-	printf("RETURN: %d\n", n);
 
 	n = myread(FV, buf, 30);
-	printf("fifth read done\n");
-	printf("RETURN: %d\n", n);
 
 	n = myread(FV, buf, 20);
 
 	n = myread(FV, buf, 50);
-	
-	printf("WE OUT\n");
 
 	write(FV2->fd, buf, 250);
 
+	
 	mywrite(FV3, buf, 20);
 	mywrite(FV3, buf, 50);
 	mywrite(FV3, buf, 130);
@@ -59,6 +48,15 @@ int main(int argc, char *argv[]) {
 	int count_for_flush = (FV3 -> bytes_writ); //this will be the amount in FV3's hidden buf if it hasn't been flushed out yet
 
 	int b = myflush(FV3, count_for_flush);
+
+
+	char buf2[19] = "\n WASSSSSSUUPPPPPP";
+
+	mywrite(FV3, buf2, 19);
+
+	count_for_flush = (FV3 -> bytes_writ);
+
+	int c = myflush(FV3, count_for_flush);
 
 	//struct FILER *FV2 = myopen("/home/sartaj/Assignments/assignment2/Testfile.txt", O_CREAT);
 
