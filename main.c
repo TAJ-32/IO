@@ -19,6 +19,8 @@ int main(int argc, char *argv[]) {
 	char buf[256];
 
 	//buf = buf + FV->offset //this will start the buffer to where lseek told it to start at once we make lseek
+	
+//	int a = myseek(FV, 30, SEEK_SET);
 
 	int n = myread(FV, buf, 10); 
 	printf("first read done\n");
@@ -51,10 +53,12 @@ int main(int argc, char *argv[]) {
 	mywrite(FV3, buf, 20);
 	mywrite(FV3, buf, 50);
 	mywrite(FV3, buf, 130);
-	printf("first 200 bytes\n");
 	mywrite(FV3, buf, 50);
-	printf("last 50\n");
 
+
+	int count_for_flush = (FV3 -> bytes_writ); //this will be the amount in FV3's hidden buf if it hasn't been flushed out yet
+
+	int b = myflush(FV3, count_for_flush);
 
 	//struct FILER *FV2 = myopen("/home/sartaj/Assignments/assignment2/Testfile.txt", O_CREAT);
 

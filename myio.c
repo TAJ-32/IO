@@ -30,6 +30,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		count = (FV -> size) - (FV -> bytes_read_tot);
 	}
 
+
 	if (FV->not_read_yet) {
 		read(FV->fd, FV->hidden_buf, FV->buf_size);
 		memcpy(buf, FV->hidden_buf, count); 
@@ -70,23 +71,14 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 }
 
 ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many bytes we are writing
-	if (FV -> flag_val == 0 || FV -> flag_val == 64) { //if a WRONLY is specified
+	if (FV -> flag_val == 0 || FV -> flag_val == 64) { //if a RONLY is specified
 		perror("No write access");
 		exit(-1);
 	}
-	/*
-	if ((FV -> bytes_writ_tot) == (FV -> size)) {
-		printf("DONE\n");
-		return 0;
-	}*/
-	
-	/*//I think this is maybe not my job because the user has to make sure they aren't writing more than they allocated 
-	if ((FV -> bytes_writ_tot) + count >= (FV -> size)) {
-		count = (FV -> size) - (FV -> bytes_read_tot);
-	}*/
 
-	printf("bytes_writ: %d\n", FV -> bytes_writ);
-	printf("bytes_writ_tot: %d\n", FV -> bytes_writ_tot);
+	if (FV -> bytes_writ == 0) {
+		memset(FV -> hidden_buf, '\0', FV -> buf_size); //clear the buffer
+	}
 
 	if (((FV -> bytes_writ) + count) >= (FV -> buf_size)) {
 
@@ -95,11 +87,9 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 		int leftovers = (FV -> buf_size) - (FV -> bytes_writ);
 
 		memcpy(FV -> hidden_buf + FV -> bytes_writ, (char *) buf + FV->bytes_writ_tot, leftovers);//fill hidden_buf to its brim
-		printf("after leftover copy: %s\n", FV->hidden_buf);
-
 
 		write(FV -> fd, FV->hidden_buf, FV -> buf_size); //write what is in the hidden_buf to the file
-		FV -> not_writ_yet = false;
+
 		memset(FV -> hidden_buf, '\0', FV -> buf_size); //clear the buffer
 
 		FV -> bytes_writ = 0; //after writing the leftovers, we want to set it back to 0
@@ -108,28 +98,36 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 		int carryover = count - leftovers;
 
 		if (carryover >= FV -> buf_size) { //in the case that the user asked to write a substantial amount more than the bufsize when we were already close to the buffer being filled
+			printf("HERE WE ARE\n");
 			while (carryover >= FV -> buf_size) {
-				printf("in loop\n");
-				leftovers = (FV -> buf_size);
-				memcpy(FV -> hidden_buf, (char *) buf + FV->bytes_writ_tot, leftovers);//fill hidden_buf to its brim
-				printf("loop leftover: %s\n", FV -> hidden_buf);
+				printf("AGAINNNN\n");
+				int new_leftovers = (FV -> buf_size);
+				memcpy(FV -> hidden_buf, (char *) buf + FV->bytes_writ_tot, new_leftovers);//fill hidden_buf to its brim
 				write(FV->fd, FV->hidden_buf, FV->buf_size);
 
-				FV -> bytes_writ = 0;
-				FV -> bytes_writ_tot += leftovers;
-
-				carryover = carryover - leftovers;
+				printf("hidden_buf aqui: %s\n", FV->hidden_buf);
 				
-				memcpy(FV -> hidden_buf, (char *) buf + FV->bytes_writ_tot, carryover);
-				printf("loop carryover: %s\n", FV -> hidden_buf);
+				FV -> bytes_writ = 0;
+				FV -> bytes_writ_tot += new_leftovers;
 
-				FV -> bytes_writ += carryover;
-				FV -> bytes_writ_tot += carryover;
+				int new_carryover = carryover - new_leftovers;
+				
+				memcpy(FV -> hidden_buf, (char *) buf + FV->bytes_writ_tot, new_carryover);
+
+				FV -> bytes_writ += new_carryover;
+				FV -> bytes_writ_tot += new_carryover;
+
+				if (FV -> bytes_writ == FV -> buf_size) {
+					printf("WINGS \n");
+					FV -> bytes_writ = 0;
+					memset(FV -> hidden_buf, '\0', FV -> buf_size); //clear the buffer
+				}
+				carryover = new_carryover;
 			}
+			printf("got out of loop\n");
 		}
 		else {
 			memcpy(FV -> hidden_buf, (char *) buf + FV->bytes_writ_tot, carryover);
-			printf("after carryover copy: %s\n", FV->hidden_buf);
 
 			FV -> bytes_writ = carryover;
 
@@ -138,7 +136,8 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 
 	}
 	else {
-		printf("Hidden buf: %s\n", FV->hidden_buf);
+		printf("Total bytes written: %d\n", FV -> bytes_writ_tot);
+		printf("hidden buf at this last point: %s\n", FV -> hidden_buf);
 
 		memcpy(FV -> hidden_buf + FV -> bytes_writ, (char *) buf + FV -> bytes_writ_tot, count);
 
@@ -153,28 +152,52 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 	//use my bytes_read_tot as a file offset to see if I am about to get to end of file.
 
 	return (count); //return the number of bytes read on this specific call
-	
-/*	
-	int bytes_so_far = FV -> bytes_writ;
-
-	if (FV->not_writ_yet || (FV -> bytes_writ) >= (FV -> buf_size)) {
-		write(FV->fd, FV->hidden_buf + FV->bytes_writ, FV->buf_size);
-
-		printf("WRITE SYSCALL\n");
-		FV->not_writ_yet = false;
-		memcpy(buf, FV->hidden_buf + FV->bytes_writ, count + 1); //the plus one for the endline character
-		printf("memcpy: %s\n", (char *) buf);
-	}
-	else {
-		memcpy(buf, FV->hidden_buf + FV->bytes_writ, count + 1);
-
-		FV -> bytes_writ += count + 1;
-		printf("memcpy: %s\n", (char *) buf);
-	}
-
-	return ((FV -> bytes_writ) - (bytes_so_far));
-*/
 }	
+
+ssize_t myflush(struct FILER *FV, int count) {
+	int n = write(FV -> fd, FV -> hidden_buf, count);
+
+	return n;
+}
+
+off_t myseek(struct FILER *FV, off_t offset, int whence) {
+	if (whence == SEEK_SET) {
+		FV -> bytes_read_tot = offset;
+		FV -> bytes_writ_tot = offset;
+		if (offset >= FV -> buf_size) {
+			FV -> bytes_read = offset % FV -> buf_size; //depending on how much the offset is, it will see if bytes_read would have reset and put it where it needs to be
+			FV -> bytes_writ = offset % FV -> buf_size; 
+		}
+	}
+	else if (whence == SEEK_CUR) {
+		FV -> bytes_read_tot += offset;
+		FV -> bytes_writ_tot += offset;
+
+		if (FV -> bytes_read >= FV -> buf_size) {
+			FV -> bytes_read = FV -> bytes_read % FV -> buf_size;
+		}
+		if (FV -> bytes_writ >= FV -> buf_size) {
+			FV -> bytes_writ = FV -> bytes_writ % FV -> buf_size;
+		}
+	}
+
+	if (FV -> flag_val == 0 || FV -> flag_val == 64) { //if a RONLY is specified
+		FV -> offset = FV -> bytes_writ_tot;
+		return FV -> bytes_writ_tot; //will be the actual file offset
+	}
+	else if (FV -> flag_val == 1 || FV -> flag_val == 65) { //if a WRONLY is specified
+		FV -> offset = FV -> bytes_read_tot;
+		return FV -> bytes_read_tot; //will be the actual file offset
+
+	}
+	else { // has rdwr access and doesn't matter what we return
+		FV -> offset = FV -> bytes_read_tot;
+		return FV -> bytes_read_tot; //will be the actual file offset
+	}
+
+
+}
+
 
 struct FILER *myopen(const char *pathname, int flags) {
 	/*
@@ -208,6 +231,7 @@ struct FILER *myopen(const char *pathname, int flags) {
 	FV -> not_writ_yet = true;
 	FV -> flag_val = flags;
 	FV -> size = st -> st_size;
+	FV -> offset = 0;
 
 	return FV;
 }

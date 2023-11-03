@@ -28,6 +28,7 @@ struct FILER {
 	int flag_val;
 	char flag_str[7]; //will need it as a string so I can loop through it and see which digits are 1. It will never be a string longer than 7
 	int size;
+	int offset;
 };
 
 struct FILER *myopen(const char *pathname, int flags);
@@ -35,6 +36,10 @@ struct FILER *myopen(const char *pathname, int flags);
 ssize_t myread(struct FILER *FV, void *buf, size_t count);
 
 ssize_t mywrite(struct FILER *FV, void *buf, size_t count);
+
+off_t myseek(struct FILER *FV, off_t offset, int whence);
+
+ssize_t myflush(struct FILER *FV, int count);
 #endif
 
 
