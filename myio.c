@@ -36,6 +36,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		memcpy(buf, FV->hidden_buf, count); 
 		FV -> bytes_read += count;
 		FV -> bytes_read_tot += count;
+		FV -> user_offset += count;
 		FV -> not_read_yet = false;
 	}
 	else if (((FV -> bytes_read) + count) >= (FV -> buf_size)) {
@@ -55,15 +56,16 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 
 		FV -> bytes_read = carryover;
 		FV -> bytes_read_tot += count;
+		FV -> user_offset += count;
 	}
 	else {
 		memcpy((char *) buf + FV->bytes_read_tot, FV->hidden_buf + FV->bytes_read, count); //copy however many bytes the user specifies from the hidden buf into the user buf. We do count + 1 to account for null char
 								     
 		FV -> bytes_read += count;
 		FV -> bytes_read_tot += count;
+		FV -> user_offset += count;
 	}
 
-	FV -> bytes_read_last = count;
 
 //use my bytes_read_tot as a file offset to see if I am about to get to end of file.
 
@@ -75,10 +77,6 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 		perror("No write access");
 		exit(-1);
 	}
-
-	printf("bytes_writ1: %d\n", FV -> bytes_writ);
-	printf("bytes_writ_tot1: %d\n", FV -> bytes_writ_tot);
-	printf("hidden_buf1: %s\n", FV -> hidden_buf);
 
 
 	if (FV -> bytes_writ == 0) {
@@ -97,6 +95,7 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 
 		FV -> bytes_writ = 0; //after writing the leftovers, we want to set it back to 0
 		FV -> bytes_writ_tot += leftovers;
+		FV -> user_offset += leftovers;
 
 		int carryover = count - leftovers;
 
@@ -108,6 +107,7 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 
 				FV -> bytes_writ = 0;
 				FV -> bytes_writ_tot += new_leftovers;
+				FV -> user_offset += new_leftovers;
 
 				int new_carryover = carryover - new_leftovers;
 				
@@ -115,6 +115,7 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 
 				FV -> bytes_writ += new_carryover;
 				FV -> bytes_writ_tot += new_carryover;
+				FV -> user_offset += new_carryover;
 
 				if (FV -> bytes_writ == FV -> buf_size) {
 					FV -> bytes_writ = 0;
@@ -129,6 +130,8 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 			FV -> bytes_writ = carryover;
 
 			FV -> bytes_writ_tot += carryover;
+
+			FV -> user_offset += carryover;
 		}
 
 	}
@@ -137,6 +140,7 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 
 		FV -> bytes_writ += count;
 		FV -> bytes_writ_tot += count;
+		FV -> user_offset += count;
 	}
 
 	if (FV -> bytes_writ_tot == FV -> size && FV -> not_writ_yet == false) { //it needs to do the second write for the carrovered bytes after leftovers is done
@@ -164,38 +168,18 @@ ssize_t myflush(struct FILER *FV, int count) {
 }
 
 off_t myseek(struct FILER *FV, off_t offset, int whence) {
+
+
 	if (whence == SEEK_SET) {
-		FV -> bytes_read_tot = offset;
-		FV -> bytes_writ_tot = offset;
-		if (offset >= FV -> buf_size) {
-			FV -> bytes_read = offset % FV -> buf_size; //depending on how much the offset is, it will see if bytes_read would have reset and put it where it needs to be
-			FV -> bytes_writ = offset % FV -> buf_size; 
-		}
+		lseek(FV -> fd, offset, SEEK_SET);
+		return offset;
 	}
 	else if (whence == SEEK_CUR) {
-		FV -> bytes_read_tot += offset;
-		FV -> bytes_writ_tot += offset;
-
-		if (FV -> bytes_read >= FV -> buf_size) {
-			FV -> bytes_read = FV -> bytes_read % FV -> buf_size;
-		}
-		if (FV -> bytes_writ >= FV -> buf_size) {
-			FV -> bytes_writ = FV -> bytes_writ % FV -> buf_size;
-		}
+		lseek(FV -> fd, FV -> user_offset + offset, SEEK_SET);
+		return (FV -> user_offset + offset);
 	}
-
-	if (FV -> flag_val == 0 || FV -> flag_val == 64) { //if a RONLY is specified
-		FV -> offset = FV -> bytes_writ_tot;
-		return FV -> bytes_writ_tot; //will be the actual file offset
-	}
-	else if (FV -> flag_val == 1 || FV -> flag_val == 65) { //if a WRONLY is specified
-		FV -> offset = FV -> bytes_read_tot;
-		return FV -> bytes_read_tot; //will be the actual file offset
-
-	}
-	else { // has rdwr access and doesn't matter what we return
-		FV -> offset = FV -> bytes_read_tot;
-		return FV -> bytes_read_tot; //will be the actual file offset
+	else {
+		return 0;
 	}
 
 
@@ -234,7 +218,7 @@ struct FILER *myopen(const char *pathname, int flags) {
 	FV -> not_writ_yet = true;
 	FV -> flag_val = flags;
 	FV -> size = st -> st_size;
-	FV -> offset = 0;
+	FV -> user_offset = 0;
 
 	return FV;
 }

@@ -20,8 +20,9 @@ int main(int argc, char *argv[]) {
 
 	//buf = buf + FV->offset //this will start the buffer to where lseek told it to start at once we make lseek
 	
-	//int a = myseek(FV, 30, SEEK_SET);
+	int a = myseek(FV, 30, SEEK_SET);
 
+	/*
 	int n = myread(FV, buf, 10); 
 
 	n = myread(FV, buf, 40);
@@ -35,6 +36,12 @@ int main(int argc, char *argv[]) {
 	n = myread(FV, buf, 20);
 
 	n = myread(FV, buf, 50);
+	*/
+
+	int n = myread(FV, buf, 40);
+	n = myread(FV, buf, 120);
+	n = myread(FV, buf, 90);
+
 
 	write(FV2->fd, buf, 250);
 
