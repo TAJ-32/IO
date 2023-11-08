@@ -127,41 +127,15 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 
 		int carryover = count - leftovers;
 
-		if (carryover >= FV -> buf_size) { //in the case that the user asked to write a substantial amount more than the bufsize when we were already close to the buffer being filled
-			while (carryover >= FV -> buf_size) {
-				int new_leftovers = (FV -> buf_size);
-				memcpy(FV -> hidden_buf, (char *) buf, new_leftovers);//fill hidden_buf to its brim
-				write(FV->fd, FV->hidden_buf, FV->buf_size);
+		printf("Crossed threshold\n");
+		memcpy(FV -> hidden_buf, (char *) buf + leftovers, carryover);
 
-				FV -> bytes_writ = 0;
-				FV -> bytes_writ_tot += new_leftovers;
-				FV -> user_offset += new_leftovers;
+		FV -> bytes_writ = carryover;
 
-				int new_carryover = carryover - new_leftovers;
-				
-				memcpy(FV -> hidden_buf, (char *) buf + leftovers + new_leftovers, new_carryover);
+		FV -> bytes_writ_tot += carryover;
 
-				FV -> bytes_writ += new_carryover;
-				FV -> bytes_writ_tot += new_carryover;
-				FV -> user_offset += new_carryover;
+		FV -> user_offset += carryover;
 
-				if (FV -> bytes_writ == FV -> buf_size) {
-					FV -> bytes_writ = 0;
-					memset(FV -> hidden_buf, '\0', FV -> buf_size); //clear the buffer
-				}
-				carryover = new_carryover;
-			}
-		}
-		else {
-			printf("Crossed threshold\n");
-			memcpy(FV -> hidden_buf, (char *) buf + leftovers, carryover);
-
-			FV -> bytes_writ = carryover;
-
-			FV -> bytes_writ_tot += carryover;
-
-			FV -> user_offset += carryover;
-		}
 
 	}
 	else {
