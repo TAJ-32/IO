@@ -39,7 +39,7 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count);
 
 off_t myseek(struct FILER *FV, off_t offset, int whence);
 
-ssize_t myflush(struct FILER *FV, int count);
+ssize_t myflush(struct FILER *FV);
 #endif
 
 

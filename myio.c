@@ -22,9 +22,21 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		exit(-1);
 	}
 
+	if ((FV -> bytes_read_tot) == (FV -> size)) {
+		return 0;
+	}
+
+	if ((FV -> bytes_read_tot) + count >= (FV -> size)) {
+		count = (FV -> size) - (FV -> bytes_read_tot);
+	}
+
+
 	if (count >= FV -> buf_size) {
 		int rest_of_hidden = FV -> buf_size - FV -> bytes_read;
 		memcpy(buf, FV->hidden_buf + FV -> bytes_read, rest_of_hidden); //copy the rest of h_buf into buf
+		if (FV -> bytes_read == 0) {
+			rest_of_hidden = 0;
+		}
 		read(FV -> fd, (char *) buf + rest_of_hidden, count-rest_of_hidden);
 		FV -> bytes_read_tot += count;
 		FV -> user_offset += count;
@@ -33,15 +45,6 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		FV -> bytes_read = 0;
 
 		return count;
-	}
-
-
-	if ((FV -> bytes_read_tot) == (FV -> size)) {
-		return 0;
-	}
-
-	if ((FV -> bytes_read_tot) + count >= (FV -> size)) {
-		count = (FV -> size) - (FV -> bytes_read_tot);
 	}
 
 
@@ -93,9 +96,8 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 	}
 
 	if (count >= FV -> buf_size) {
-		printf("it's this case: %s\n", (char *) buf);
 		int flushed = FV -> bytes_writ;
-		myflush(FV, flushed);
+		myflush(FV);
 		write(FV -> fd, (char *) buf, count);
 		FV -> bytes_writ_tot += count - flushed;
 		FV -> user_offset += count - flushed;
@@ -127,7 +129,6 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 
 		int carryover = count - leftovers;
 
-		printf("Crossed threshold\n");
 		memcpy(FV -> hidden_buf, (char *) buf + leftovers, carryover);
 
 		FV -> bytes_writ = carryover;
@@ -139,11 +140,7 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 
 	}
 	else {
-		printf("ELSE\n");
 		memcpy(FV -> hidden_buf + FV -> bytes_writ, (char *) buf, count);
-		
-		printf("hidden_buf here: %s", FV -> hidden_buf + FV -> bytes_writ);
-
 		FV -> bytes_writ += count;
 		FV -> bytes_writ_tot += count;
 		FV -> user_offset += count;
@@ -158,20 +155,17 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 	return (count); //return the number of bytes read on this specific call
 }	
 
-ssize_t myflush(struct FILER *FV, int count) {
-	printf("bytes_writ2: %d\n", FV -> bytes_writ);
-	printf("bytes_writ_tot2: %d\n", FV -> bytes_writ_tot);
-	printf("hidden_buf2: %s\n", FV -> hidden_buf);
+ssize_t myflush(struct FILER *FV) {
 
-	int n = write(FV -> fd, FV -> hidden_buf, count);
+	int n = write(FV -> fd, FV -> hidden_buf, FV -> bytes_writ);
 
 	memset(FV->hidden_buf, '\0', FV -> buf_size);
 
 	FV -> bytes_writ = 0;
-	FV -> bytes_writ_tot += count;
-	FV -> user_offset += count;
+	FV -> bytes_writ_tot += FV -> bytes_writ;
+	FV -> user_offset += FV -> bytes_writ;
 
-	return n;
+	return 0;
 }
 
 off_t myseek(struct FILER *FV, off_t offset, int whence) {
