@@ -33,6 +33,8 @@ struct FILER {
 
 struct FILER *myopen(const char *pathname, int flags);
 
+int myclose(struct FILER *FV);
+
 ssize_t myread(struct FILER *FV, void *buf, size_t count);
 
 ssize_t mywrite(struct FILER *FV, void *buf, size_t count);

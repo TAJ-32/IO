@@ -224,3 +224,12 @@ struct FILER *myopen(const char *pathname, int flags) {
 	return FV;
 }
 
+int myclose(struct FILER *FV) {
+	int n = close(FV->fd);
+
+	free(FV->hidden_buf);
+	free(FV);
+
+	return n;
+}
+
