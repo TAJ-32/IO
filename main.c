@@ -22,17 +22,20 @@ int main(int argc, char *argv[]) {
 	
 	//int a = myseek(FV, 30, SEEK_SET);
 	
-	//int n = myread(FV, buf, 10);
-	//n = myread(FV, buf + 10, 210); 
+	/*
+	int n = myread(FV, buf, 10);
+	n = myread(FV, buf + 10, 210); 
 
-	//n = mywrite(FV3, buf, 70);
-	//n = mywrite(FV3, buf + 70, 140); 
-
-
-	int n = myread(FV, buf, 259);
-	n = myread(FV, buf + 259, 20);
-
-	mywrite(FV3, buf, 259);
+	n = mywrite(FV3, buf, 70);
+	n = mywrite(FV3, buf + 70, 150); 
+	*/
+	int a = myseek(FV3, 30, SEEK_SET);
+	int n = myread(FV3, buf, 25);
+	n = myread(FV3, buf + 25, 85);
+	a = myseek(FV3, 0, SEEK_SET);
+	int m = mywrite(FV3, buf, 20);
+	m = mywrite(FV3, buf + 20, 90);
+	int o = myclose(FV3);
 
 	//printf("buf b4 write: %s\n", buf);
 
@@ -58,7 +61,7 @@ int main(int argc, char *argv[]) {
 	mywrite(FV3, buf + 70, 130);
 	mywrite(FV3, buf + 200, 50);
 */
-	int b = myflush(FV3);
+	//int b = myflush(FV3);
 
 
 	char buf2[19] = "\n WASSSSSSUUPPPPPP";

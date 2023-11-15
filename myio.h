@@ -1,3 +1,9 @@
+
+
+#ifndef __MY_IO_H
+#define __MY_IO_H
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -5,14 +11,6 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <string.h>
-
-#ifndef __MY_IO_H
-#define __MY_IO_H
-
-//#define O_CREAT  1000000
-//#define O_WRONLY 1
-//#define O_RDONLY 10
-//#define O_RDWR   100
 
 struct FILER {
 	int fd;

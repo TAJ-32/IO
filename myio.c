@@ -16,7 +16,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 	 *	- the size specified by the first myread call
 	 *we will pass that struct through on every call of myread so that it knows where to start adding to the buffer from the file
 	 */
-	
+
 	if (FV -> flag_val == 1 || FV -> flag_val == 65) { //if a WRONLY is specified
 		perror("No read access");
 		exit(-1);
@@ -47,10 +47,9 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		return count;
 	}
 
-
 	if (FV->not_read_yet) {
 		read(FV->fd, FV->hidden_buf, FV->buf_size);
-		memcpy(buf, FV->hidden_buf, count); 
+		memcpy(buf, FV->hidden_buf, count);
 		FV -> bytes_read += count;
 		FV -> bytes_read_tot += count;
 		FV -> user_offset += count;
@@ -141,6 +140,7 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) { //count is how many
 	}
 	else {
 		memcpy(FV -> hidden_buf + FV -> bytes_writ, (char *) buf, count);
+
 		FV -> bytes_writ += count;
 		FV -> bytes_writ_tot += count;
 		FV -> user_offset += count;
@@ -225,6 +225,12 @@ struct FILER *myopen(const char *pathname, int flags) {
 }
 
 int myclose(struct FILER *FV) {
+
+	if (FV->bytes_writ > 0){
+		printf("gonna flush\n");
+		myflush(FV); //if still things in the hidden_buf, we flush
+	}
+
 	int n = close(FV->fd);
 
 	free(FV->hidden_buf);
