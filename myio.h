@@ -23,8 +23,7 @@ struct FILER {
 	bool not_writ_yet;
 	int bytes_writ;
 	int bytes_writ_tot;
-	int flag_val;
-	char flag_str[7]; //will need it as a string so I can loop through it and see which digits are 1. It will never be a string longer than 7
+	int flags;
 	int size;
 	int user_offset;
 };

@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 	//int b = myflush(FV3);
 
 
-	char buf2[19] = "\n WASSSSSSUUPPPPPP";
+	//char buf2[19] = "\n WASSSSSSUUPPPPPP";
 
 	//mywrite(FV3, buf2 + 250, 19);
 
