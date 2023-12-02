@@ -16,21 +16,25 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 	 *	- the size specified by the first myread call
 	 *we will pass that struct through on every call of myread so that it knows where to start adding to the buffer from the file
 	 */
-
-	if (FV->flags == 1 || FV->flags == 65) { //if a WRONLY is specified
+	
+	//if a WRONLY is specified
+	if (FV->flags == 1 || FV->flags == 65) { 
 		perror("No read access");
 		exit(-1);
 	}
-
+	
+	//if the whole file has been read, just be done
 	if ((FV->bytes_read_tot) == (FV->size)) {
 		return 0;
 	}
 
+	//don't read more than the file size
 	if ((FV->bytes_read_tot) + count >= (FV->size)) {
 		count = (FV->size) - (FV->bytes_read_tot);
 	}
 
-
+	//if they want to read more than the specified buf_size, just do the actual read syscall and 
+	//do a little pointer arithmetic to keep hidden_buf accurate
 	if (count >= FV->buf_size) {
 		int rest_of_hidden = FV->buf_size - FV->bytes_read;
 		//copy the rest of h_buf into buf
@@ -48,6 +52,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		return count;
 	}
 
+	//if first read, we want to do the actual read syscall
 	if (FV->not_read_yet) {
 		read(FV->fd, FV->hidden_buf, FV->buf_size);
 		memcpy(buf, FV->hidden_buf, count);
@@ -56,6 +61,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		FV->user_offset += count;
 		FV->not_read_yet = false;
 	}
+	//if this next myread will take us over the buf size, we want to do pointer arithmetic to keep hidden_buf accurate
 	else if (((FV->bytes_read) + count) >= (FV->buf_size)) {
 
 		int leftovers = (FV->buf_size) - (FV->bytes_read);
@@ -95,6 +101,16 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 		perror("No write access");
 		exit(-1);
 	}
+	
+	//int old_offset = FV -> user_offset;
+	
+	myseek(FV, FV->user_offset, SEEK_SET);
+	
+	if (FV->flags >= 1024) {
+		myseek(FV, FV->size, SEEK_SET);
+	}
+
+
 
 	if (count >= FV->buf_size) {
 		int flushed = FV->bytes_writ;
@@ -139,7 +155,7 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 
 		FV->bytes_writ_tot += carryover;
 
-		FV->user_offset += carryover;
+		//FV->user_offset += carryover;
 
 
 	}
@@ -148,17 +164,27 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 
 		FV->bytes_writ += count;
 		FV->bytes_writ_tot += count;
-		FV->user_offset += count;
+		//FV->user_offset += count;
 	}
 
 	//it needs to do the second write for the carrovered bytes after leftovers is done
 	if (FV->bytes_writ_tot == FV->size && FV->not_writ_yet == false) { 
 		write(FV->fd, FV->hidden_buf, FV->buf_size);
+		FV->user_offset += count;
 	}
 
-	return (count); }	
+	//FV->user_offset = old_offset;
+
+	return (count); 
+}	
 
 ssize_t myflush(struct FILER *FV) {
+
+	printf("File offset: %d\n", FV->user_offset);
+
+	printf("hidden_buf: %s\n", FV->hidden_buf);
+
+	printf("bytes writ: %d\n", FV->bytes_writ);
 
 	int n = write(FV->fd, FV->hidden_buf, FV->bytes_writ);
 
@@ -176,10 +202,12 @@ off_t myseek(struct FILER *FV, off_t offset, int whence) {
 
 	if (whence == SEEK_SET) {
 		lseek(FV->fd, offset, SEEK_SET);
+		FV->user_offset = offset;
 		return offset;
 	}
 	else if (whence == SEEK_CUR) {
 		lseek(FV->fd, FV->user_offset + offset, SEEK_SET);
+		FV->user_offset += offset;
 		return (FV->user_offset + offset);
 	}
 	else {
@@ -204,10 +232,6 @@ struct FILER *myopen(const char *pathname, int flags) {
 	int fd = open(pathname, flags);
 
 	int buf_size = 100;
-
-	printf("What would you like the buf_size to be: \n");
-
-	scanf("%d", &buf_size);
 
 	struct FILER *FV = malloc(sizeof(struct FILER));
 	FV->fd = fd;
