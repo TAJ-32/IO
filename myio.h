@@ -1,16 +1,8 @@
+#ifndef __MYIO_H
+#define __MYIO_H
 
 
-#ifndef __MY_IO_H
-#define __MY_IO_H
 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <stdbool.h>
-#include <string.h>
 
 struct FILER {
 	int fd;
