@@ -14,24 +14,24 @@ int main(int argc, char *argv[]) {
 
 	struct FILER *FV2 = myopen("/home/sartaj/Assignments/assignment2/Outfile.txt", O_RDWR);
 
-	struct FILER *FV3 = myopen("/home/sartaj/Assignments/assignment2/Outfile2.txt", O_RDWR | O_APPEND);
+	struct FILER *FV3 = myopen("/home/sartaj/Assignments/assignment2/Outfile2.txt", O_RDWR | O_CREAT);
 
 	char buf[256];
 	
 	int a = myread(FV2, buf, 20);
-	printf("buf: %s\n", buf);
-	printf("offset: %d\n", FV2->user_offset);
 	int b = mywrite(FV2, buf, 20);
 
-	//a = myread(FV2, buf + 20, 30);
-	//printf("buf + 20: %s\n", buf + 20);
-	//int d = myseek(FV2, 100, SEEK_SET);
-	//b = mywrite(FV2, buf + 20, 30);
-
 	int c = myclose(FV2);
+
+	char buf2[256];
 	
+	int d = myread(FV, buf2, 80);
+	int e = mywrite(FV3, buf2, 80);
 
+	int f = myclose(FV);
+	int g = myclose(FV3);
 
+	printf("a: %d, b:%d, c:%d, d:%d, e:%d, f:%d, g:%d\n", a, b, c, d, e, f, g);
 
 	return 0;
 }

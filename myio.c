@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 #include <string.h>
+#include <errno.h>
 #include "myio.h" 
 
 ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many bytes we are reading
@@ -17,9 +18,9 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 	 *we will pass that struct through on every call of myread so that it knows where to start adding to the buffer from the file
 	 */
 	
-	//if a WRONLY is specified
+	//if a WRONLY is specified.
 	if (FV->flags == 1 || FV->flags == 65) { 
-		perror("No read access");
+		perror("No Read Access");
 		exit(-1);
 	}
 	
@@ -42,7 +43,10 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		if (FV->bytes_read == 0) {
 			rest_of_hidden = 0;
 		}
-		read(FV->fd, (char *) buf + rest_of_hidden, count-rest_of_hidden);
+		if (read(FV->fd, (char *) buf + rest_of_hidden, count-rest_of_hidden) < 0) {
+			perror("Error reading file");
+			exit(-1);
+		}
 		FV->bytes_read_tot += count;
 		FV->user_offset += count;
 
@@ -54,7 +58,10 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 
 	//if first read, we want to do the actual read syscall
 	if (FV->not_read_yet) {
-		read(FV->fd, FV->hidden_buf, FV->buf_size);
+		if (read(FV->fd, FV->hidden_buf, FV->buf_size) < 0) {
+			perror("Error reading file");
+			exit(-1);	
+		}
 		memcpy(buf, FV->hidden_buf, count);
 		FV->bytes_read += count;
 		FV->bytes_read_tot += count;
@@ -115,7 +122,10 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 	if (count >= FV->buf_size) {
 		int flushed = FV->bytes_writ;
 		myflush(FV);
-		write(FV->fd, (char *) buf, count);
+		if (write(FV->fd, (char *) buf, count) < 0) {
+			perror("Error writing to file");
+			exit(-1);
+		}
 		FV->bytes_writ_tot += count - flushed;
 		FV->user_offset += count - flushed;
 		memset(FV->hidden_buf, '\0', FV->buf_size); 
@@ -180,13 +190,10 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 
 ssize_t myflush(struct FILER *FV) {
 
-	printf("File offset: %d\n", FV->user_offset);
-
-	printf("hidden_buf: %s\n", FV->hidden_buf);
-
-	printf("bytes writ: %d\n", FV->bytes_writ);
-
-	int n = write(FV->fd, FV->hidden_buf, FV->bytes_writ);
+	if (write(FV->fd, FV->hidden_buf, FV->bytes_writ) < 0) {
+		perror("Error writing to file");
+		exit(-1);
+	}
 
 	memset(FV->hidden_buf, '\0', FV->buf_size);
 
@@ -201,12 +208,18 @@ off_t myseek(struct FILER *FV, off_t offset, int whence) {
 
 
 	if (whence == SEEK_SET) {
-		lseek(FV->fd, offset, SEEK_SET);
+		if (lseek(FV->fd, offset, SEEK_SET) < (off_t) -1) {
+			perror("lseek error");
+			exit((off_t) -1);
+		}
 		FV->user_offset = offset;
 		return offset;
 	}
 	else if (whence == SEEK_CUR) {
-		lseek(FV->fd, FV->user_offset + offset, SEEK_SET);
+		if (lseek(FV->fd, FV->user_offset + offset, SEEK_SET) < (off_t) -1) {
+			perror("lseek error");
+			exit((off_t) -1);
+		}	
 		FV->user_offset += offset;
 		return (FV->user_offset + offset);
 	}
@@ -230,6 +243,11 @@ struct FILER *myopen(const char *pathname, int flags) {
 	stat(pathname, st);
 
 	int fd = open(pathname, flags);
+
+	if (fd < 0) {
+		perror("File could not be opened");
+		exit(-1);
+	}
 
 	int buf_size = 100;
 
@@ -259,6 +277,11 @@ int myclose(struct FILER *FV) {
 	}
 
 	int n = close(FV->fd);
+
+	if (n < 0) {
+		perror("Error closing file");
+		exit(-1);
+	}
 
 	free(FV->hidden_buf);
 	free(FV);
