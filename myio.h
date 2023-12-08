@@ -1,7 +1,7 @@
 #ifndef __MYIO_H
 #define __MYIO_H
 
-
+#define BUF_SIZE 100
 
 
 struct FILER {

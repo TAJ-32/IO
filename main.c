@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 	int c = myclose(FV2);
 
 	
-	/*
+	
 	char buf2[256];
 	
 	int d = myread(FV, buf2, 80);
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
 	int g = myclose(FV3);
 
 	printf("a: %d, b:%d, c:%d, d:%d, e:%d, f:%d, g:%d\n", a, b, c, d, e, f, g);
-	*/
+	
 
 	return 0;
 }
