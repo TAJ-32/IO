@@ -18,6 +18,8 @@ struct FILER {
 	int flags;
 	int size;
 	int user_offset;
+	int offset;
+	int buf_offset;
 };
 
 struct FILER *myopen(const char *pathname, int flags);

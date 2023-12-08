@@ -19,7 +19,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 	 */
 	
 	//if a WRONLY is specified.
-	if (FV->flags == 1 || FV->flags == 65) { 
+	if (FV->flags & O_WRONLY) { 
 		perror("No Read Access");
 		exit(-1);
 	}
@@ -52,6 +52,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 
 		memset(FV->hidden_buf, '\0', FV->buf_size); 
 		FV->bytes_read = 0;
+		FV->buf_offset = 0;
 
 		return count;
 	}
@@ -59,12 +60,14 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 	//if first read, we want to do the actual read syscall
 	if (FV->not_read_yet) {
 		if (read(FV->fd, FV->hidden_buf, FV->buf_size) < 0) {
-			perror("Error reading file");
-			exit(-1);	
+			return -1;
 		}
+		printf("AFTER: %s\n", FV->hidden_buf);
 		memcpy(buf, FV->hidden_buf, count);
 		FV->bytes_read += count;
+		FV->buf_offset += count;
 		FV->bytes_read_tot += count;
+		FV->offset += FV->buf_size;
 		FV->user_offset += count;
 		FV->not_read_yet = false;
 	}
@@ -77,6 +80,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		memcpy((char *) buf, FV->hidden_buf + FV->bytes_read, leftovers); 
 
 		FV->bytes_read += leftovers;
+		FV->buf_offset += leftovers;
 
 		memset(FV->hidden_buf, '\0', FV->buf_size);
 		read(FV->fd, FV->hidden_buf, FV->buf_size);
@@ -86,13 +90,16 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		memcpy((char *) buf + leftovers, FV->hidden_buf, carryover);
 
 		FV->bytes_read = carryover;
+		FV->buf_offset = carryover;
 		FV->bytes_read_tot += count;
 		FV->user_offset += count;
+		FV->offset += FV->buf_size;
 	}
 	else {
 		//copy however many bytes the user specifies from the hidden buf into the user buf. We do count + 1 to account for null char
 		memcpy((char *) buf, FV->hidden_buf + FV->bytes_read, count); 								     
 		FV->bytes_read += count;
+		FV->buf_offset += count;
 		FV->bytes_read_tot += count;
 		FV->user_offset += count;
 	}
@@ -104,38 +111,38 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 
 	//if a RDONLY is specified
-	if (FV->flags == 0 || FV->flags == 64) { 
+	if (FV->flags & O_RDONLY) { 
 		perror("No write access");
 		exit(-1);
 	}
 	
 	//int old_offset = FV -> user_offset;
 	
-	myseek(FV, FV->user_offset, SEEK_SET);
-	
-	if (FV->flags >= 1024) {
+	if (FV->flags & O_APPEND) {
 		myseek(FV, FV->size, SEEK_SET);
 	}
-
-
 
 	if (count >= FV->buf_size) {
 		int flushed = FV->bytes_writ;
 		myflush(FV);
+		lseek(FV->fd, -1*FV->buf_size, SEEK_CUR);
+		FV->offset -= FV->buf_size;
 		if (write(FV->fd, (char *) buf, count) < 0) {
 			perror("Error writing to file");
 			exit(-1);
 		}
 		FV->bytes_writ_tot += count - flushed;
-		FV->user_offset += count - flushed;
+		FV->offset += count;
+		FV->user_offset += count;
 		memset(FV->hidden_buf, '\0', FV->buf_size); 
 		FV->bytes_writ = 0;
+		FV->buf_offset = 0;
 
 		return count;
 	}
 
 
-	if (FV->bytes_writ == 0) {
+	if (FV->bytes_writ == 0 && FV->buf_offset == 0) {
 		//clear the buffer
 		memset(FV->hidden_buf, '\0', FV->buf_size); 
 	}
@@ -145,9 +152,11 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 		int leftovers = (FV->buf_size) - (FV->bytes_writ);
 
 		//fill hidden_buf to its brim
-		memcpy(FV->hidden_buf + FV->bytes_writ, (char *) buf, leftovers);
+		memcpy(FV->hidden_buf + FV->buf_offset, (char *) buf, leftovers);
 
-		 //write what is in the hidden_buf to the file
+		//write what is in the hidden_buf to the file
+		lseek(FV->fd, -1*FV->buf_size, SEEK_CUR);
+		FV->offset -= FV->buf_size;
 		write(FV->fd, FV->hidden_buf, FV->buf_size);
 
 		memset(FV->hidden_buf, '\0', FV->buf_size); 
@@ -156,12 +165,14 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 		FV->bytes_writ = 0; 
 		FV->bytes_writ_tot += leftovers;
 		FV->user_offset += leftovers;
+		FV->offset += FV->buf_size;
 
 		int carryover = count - leftovers;
 
 		memcpy(FV->hidden_buf, (char *) buf + leftovers, carryover);
 
 		FV->bytes_writ = carryover;
+		FV->buf_offset = carryover;
 
 		FV->bytes_writ_tot += carryover;
 
@@ -170,17 +181,24 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 
 	}
 	else {
-		memcpy(FV->hidden_buf + FV->bytes_writ, (char *) buf, count);
-
+		printf("buf offset: %d\n", FV->buf_offset);
+		printf("hidden_buf before: %s\n", FV->hidden_buf);
+		printf("h_buf + buf_offset: %s\n", FV->hidden_buf + FV->buf_offset);
+		memcpy(FV->hidden_buf + FV->buf_offset, (char *) buf + '\0', count);
+		printf("HIDDEN: %s\n", FV->hidden_buf);
 		FV->bytes_writ += count;
+		FV->buf_offset += count;
 		FV->bytes_writ_tot += count;
-		//FV->user_offset += count;
+		FV->user_offset += count;
 	}
 
 	//it needs to do the second write for the carrovered bytes after leftovers is done
 	if (FV->bytes_writ_tot == FV->size && FV->not_writ_yet == false) { 
+		lseek(FV->fd, -1*FV->buf_size, SEEK_CUR);
+		FV->offset -= FV->buf_size;
 		write(FV->fd, FV->hidden_buf, FV->buf_size);
 		FV->user_offset += count;
+		FV->offset += FV->buf_size;
 	}
 
 	//FV->user_offset = old_offset;
@@ -189,8 +207,12 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 }	
 
 ssize_t myflush(struct FILER *FV) {
-
-	if (write(FV->fd, FV->hidden_buf, FV->bytes_writ) < 0) {
+	
+	printf("H: %d\n", FV->buf_offset);
+		
+	lseek(FV->fd, -1*FV->buf_size, SEEK_CUR);
+	FV->offset -= FV->buf_size;
+	if (write(FV->fd, FV->hidden_buf, FV->buf_offset) < 0) {
 		perror("Error writing to file");
 		exit(-1);
 	}
@@ -198,8 +220,10 @@ ssize_t myflush(struct FILER *FV) {
 	memset(FV->hidden_buf, '\0', FV->buf_size);
 
 	FV->bytes_writ = 0;
+	FV->buf_offset = 0;
 	FV->bytes_writ_tot += FV->bytes_writ;
 	FV->user_offset += FV->bytes_writ;
+	FV->offset += FV->bytes_writ;
 
 	return 0;
 }
@@ -245,8 +269,7 @@ struct FILER *myopen(const char *pathname, int flags) {
 	int fd = open(pathname, flags);
 
 	if (fd < 0) {
-		perror("File could not be opened");
-		exit(-1);
+		return NULL;
 	}
 
 	int buf_size = 100;
@@ -265,6 +288,8 @@ struct FILER *myopen(const char *pathname, int flags) {
 	FV->flags = flags;
 	FV->size = st->st_size;
 	FV->user_offset = 0;
+	FV->offset = 0;
+	FV->buf_offset = 0;
 
 	return FV;
 }
@@ -288,4 +313,25 @@ int myclose(struct FILER *FV) {
 
 	return n;
 }
+/*
+ *
+ *
+My name is Sartaj Singh.
+I am a student at Middlebury College
+I am trying to
+figure this
+shit
+out. I really
+hope that
+this works!
 
+Update:
+I think this
+might
+REALLY BE WORKINGGGGGG!
+I am so excited!
+
+I also think WRITE is working now too!!
+This is a-
+mazing!
+*/
