@@ -19,12 +19,12 @@ int main(int argc, char *argv[]) {
 	char buf[256];
 	
 	
-//	int a = read(4, buf, 20);
+	//int a = read(4, buf, 20);
 	//printf("buf: %s\n", buf);
-//	int b = write(4, buf, 20);
+	//int b = write(4, buf, 20);
 //	a = read(4, buf, 20);
 //	b = write(4, buf, 20);
-	//a = read(4, buf, 20);
+//	a = read(4, buf, 20);
 	//b = write(4, buf, 21);
 	
 	
@@ -32,8 +32,9 @@ int main(int argc, char *argv[]) {
 	//printf("buf: %s\n", buf);
 	//printf("hbuf: %s\n", FV2->hidden_buf);
 	int b = mywrite(FV2, buf, 20);
-	//a = myread(FV2, buf + 20, 20);
-	//b = mywrite(FV2, buf + 20, 20);
+	//printf("buf: %s buf + 20: %s h_buf: %s buf_offset:%d offset:%d u_offset: %d", buf, buf + 20, FV2->hidden_buf, FV2->buf_offset, FV2->offset, FV2->user_offset);
+	a = myread(FV2, buf + 20, 20);
+	b = mywrite(FV2, buf + 20, 20);
 	int c = myclose(FV2);
 
 	

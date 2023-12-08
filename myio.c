@@ -39,7 +39,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 	if (count >= FV->buf_size) {
 		int rest_of_hidden = FV->buf_size - FV->bytes_read;
 		//copy the rest of h_buf into buf
-		memcpy(buf, FV->hidden_buf + FV->bytes_read, rest_of_hidden); 
+		memcpy(buf, FV->hidden_buf + FV->buf_offset, rest_of_hidden); 
 		if (FV->bytes_read == 0) {
 			rest_of_hidden = 0;
 		}
@@ -62,7 +62,6 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		if (read(FV->fd, FV->hidden_buf, FV->buf_size) < 0) {
 			return -1;
 		}
-		printf("AFTER: %s\n", FV->hidden_buf);
 		memcpy(buf, FV->hidden_buf, count);
 		FV->bytes_read += count;
 		FV->buf_offset += count;
@@ -77,7 +76,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		int leftovers = (FV->buf_size) - (FV->bytes_read);
 
 		//copy the few bits that will get lost in between the myread and the syscall to buf
-		memcpy((char *) buf, FV->hidden_buf + FV->bytes_read, leftovers); 
+		memcpy((char *) buf, FV->hidden_buf + FV->buf_offset, leftovers); 
 
 		FV->bytes_read += leftovers;
 		FV->buf_offset += leftovers;
@@ -97,7 +96,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 	}
 	else {
 		//copy however many bytes the user specifies from the hidden buf into the user buf. We do count + 1 to account for null char
-		memcpy((char *) buf, FV->hidden_buf + FV->bytes_read, count); 								     
+		memcpy((char *) buf, FV->hidden_buf + FV->buf_offset, count); 								     
 		FV->bytes_read += count;
 		FV->buf_offset += count;
 		FV->bytes_read_tot += count;
@@ -181,11 +180,7 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 
 	}
 	else {
-		printf("buf offset: %d\n", FV->buf_offset);
-		printf("hidden_buf before: %s\n", FV->hidden_buf);
-		printf("h_buf + buf_offset: %s\n", FV->hidden_buf + FV->buf_offset);
 		memcpy(FV->hidden_buf + FV->buf_offset, (char *) buf + '\0', count);
-		printf("HIDDEN: %s\n", FV->hidden_buf);
 		FV->bytes_writ += count;
 		FV->buf_offset += count;
 		FV->bytes_writ_tot += count;
@@ -207,14 +202,13 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 }	
 
 ssize_t myflush(struct FILER *FV) {
-	
-	printf("H: %d\n", FV->buf_offset);
 		
-	lseek(FV->fd, -1*FV->buf_size, SEEK_CUR);
+	if (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1) {
+		return NULL;
+	}
 	FV->offset -= FV->buf_size;
 	if (write(FV->fd, FV->hidden_buf, FV->buf_offset) < 0) {
-		perror("Error writing to file");
-		exit(-1);
+		return NULL;
 	}
 
 	memset(FV->hidden_buf, '\0', FV->buf_size);
@@ -233,8 +227,7 @@ off_t myseek(struct FILER *FV, off_t offset, int whence) {
 
 	if (whence == SEEK_SET) {
 		if (lseek(FV->fd, offset, SEEK_SET) < (off_t) -1) {
-			perror("lseek error");
-			exit((off_t) -1);
+			return NULL;
 		}
 		FV->user_offset = offset;
 		return offset;
