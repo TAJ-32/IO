@@ -4,3 +4,5 @@ myio: myio.c
 .PHONE: clean
 clean:
 	rm -f myio
+	cp Testfile.txt Outfile.txt
+	cp Testfile.txt Outfile2.txt

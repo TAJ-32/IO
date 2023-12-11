@@ -36,6 +36,19 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 	//if they want to read more than the specified buf_size, just do the actual read syscall and 
 	//do a little pointer arithmetic to keep hidden_buf accurate
 	if (count >= FV->buf_size) {
+		if (FV->not_read_yet) {
+			printf("FIRST CALL\n");
+			if (read(FV->fd, buf, count) < 0) {
+				return 1;
+			}
+			FV->bytes_read_tot += count;
+			FV->offset += count;
+			FV->user_offset += count;
+			//we don't set not_read_yet to true because they haven't made a read for little amount of bytes so we just use the actual syscall until they want to do that
+
+			return count;
+		}
+
 		int rest_of_hidden = FV->buf_size - FV->bytes_read;
 		//copy the rest of h_buf into buf
 		memcpy(buf, FV->hidden_buf + FV->buf_offset, rest_of_hidden); 
@@ -56,8 +69,10 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		return count;
 	}
 
+
 	//if first read, we want to do the actual read syscall
 	if (FV->not_read_yet) {
+		printf("HERE\n");
 		if (read(FV->fd, FV->hidden_buf, FV->buf_size) < 0) {
 			return 1;
 		}
@@ -68,6 +83,8 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		FV->offset += FV->buf_size;
 		FV->user_offset += count;
 		FV->not_read_yet = false;
+
+		return count;
 	}
 	//if this next myread will take us over the buf size, we want to do pointer arithmetic to keep hidden_buf accurate
 	else if (((FV->bytes_read) + count) >= (FV->buf_size)) {
@@ -105,7 +122,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 	}
 
 
-	return (count); 
+	return count; 
 }
 
 ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
@@ -123,11 +140,17 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 
 	if (count >= FV->buf_size) {
 		int flushed = FV->bytes_writ;
-		myflush(FV);
-		if (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1) {
-			return 1;
+		if (flushed != 0) {
+			printf("shouldn't\n");
+			myflush(FV);
 		}
-		FV->offset -= FV->buf_size;
+		if (FV->bytes_writ != 0) {
+			if (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1) {
+				return 1;
+			}
+			FV->offset -= FV->buf_size;
+		}
+
 		if (write(FV->fd, (char *) buf, count) < 0) {
 			return 1;
 		}
@@ -155,10 +178,13 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 		memcpy(FV->hidden_buf + FV->buf_offset, (char *) buf, leftovers);
 
 		//write what is in the hidden_buf to the file
-		if (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1) {
-			return 1;
+		if (FV->bytes_writ != 0) {
+			if (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1) {
+				return 1;
+			}
+			FV->offset -= FV->buf_size;
 		}
-		FV->offset -= FV->buf_size;
+
 		if (write(FV->fd, (char *) buf, count) < 0) {
 			return 1;
 		}
@@ -185,7 +211,8 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 
 	}
 	else {
-		memcpy(FV->hidden_buf + FV->buf_offset, (char *) buf + '\0', count);
+		printf("HERE NOW\n");
+		memcpy(FV->hidden_buf + FV->buf_offset, (char *) buf, count);
 		FV->bytes_writ += count;
 		FV->buf_offset += count;
 		FV->bytes_writ_tot += count;
@@ -194,10 +221,13 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 
 	//it needs to do the second write for the carrovered bytes after leftovers is done
 	if (FV->bytes_writ_tot == FV->size && FV->not_writ_yet == false) { 
-		if (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1) {
-			return 1;
+		if (FV->bytes_writ != 0) {
+			if (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1) {
+				return 1;
+			}
+			FV->offset -= FV->buf_size;
 		}
-		FV->offset -= FV->buf_size;
+
 		if (write(FV->fd, (char *) buf, count) < 0) {
 			return 1;
 		}
@@ -212,10 +242,13 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 
 ssize_t myflush(struct FILER *FV) {
 		
-	if (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1) {
-		return 1;
+	if (FV->bytes_writ != 0) {
+		if (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1) {
+			return 1;
+		}
+		FV->offset -= FV->buf_size;
 	}
-	FV->offset -= FV->buf_size;
+
 	if (write(FV->fd, FV->hidden_buf, FV->buf_offset) < 0) {
 		return 1;
 	}

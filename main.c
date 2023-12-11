@@ -14,31 +14,35 @@ int main(int argc, char *argv[]) {
 
 	struct FILER *FV2 = myopen("/home/sartaj/Assignments/assignment2/Outfile.txt", O_RDWR);
 
-	struct FILER *FV3 = myopen("/home/sartaj/Assignments/assignment2/Outfile2.txt", O_RDWR | O_CREAT);
+	struct FILER *FV3 = myopen("/home/sartaj/Assignments/assignment2/Outfile2.txt", O_RDWR);
 
-	char buf[256];
+	char buf[1024];
+	char buf2[1024];
 	
 	
-	//int a = read(4, buf, 20);
-	//printf("buf: %s\n", buf);
-	//int b = write(4, buf, 20);
-//	a = read(4, buf, 20);
-//	b = write(4, buf, 20);
-//	a = read(4, buf, 20);
-	//b = write(4, buf, 21);
+	int x = read(4, buf2, 20);
+//	printf("buf2: %s\n", buf2);
+	int y = write(4, buf2, 20);
+	x = read(4, buf2, 60);
+	y = write(4, buf2, 60);
+	//x = read(4, buf, 30);
+	//y = write(4, buf, 30);
 	
 	
-	int a = myread(FV2, buf, 20);
-	//printf("buf: %s\n", buf);
-	//printf("hbuf: %s\n", FV2->hidden_buf);
-	int b = mywrite(FV2, buf, 20);
-	//printf("buf: %s buf + 20: %s h_buf: %s buf_offset:%d offset:%d u_offset: %d", buf, buf + 20, FV2->hidden_buf, FV2->buf_offset, FV2->offset, FV2->user_offset);
-	a = myread(FV2, buf + 20, 20);
-	b = mywrite(FV2, buf + 20, 20);
-	int c = myclose(FV2);
-
+	
+	int a = myread(FV3, buf, 20);
+//	printf("buf: %s\n h_buf: %s\n\n", buf, FV3->hidden_buf);
+	int b = mywrite(FV3, buf, 20);
+	//printf("buf: %s h_buf: %s\n\n", buf, FV3->hidden_buf);
+	a = myread(FV3, buf + 20, 60);
+	b = mywrite(FV3, buf + 20, 60);
+	//printf("buf: %s\n\n, h_buf: %s, offset: %d, u_offset: %d, bytes_writ: %d, bytes_read: %d\n", buf, FV3->hidden_buf, FV3->offset, FV3->user_offset, FV3->bytes_writ, FV3->bytes_read);
+	//a = myread(FV3, buf + 280, 30);
+	//b = mywrite(FV3, buf + 280, 30);
+	int c = myclose(FV3);
 	
 	
+/*	
 	char buf2[256];
 	
 	int d = myread(FV, buf2, 80);
@@ -48,7 +52,7 @@ int main(int argc, char *argv[]) {
 	int g = myclose(FV3);
 
 	printf("a: %d, b:%d, c:%d, d:%d, e:%d, f:%d, g:%d\n", a, b, c, d, e, f, g);
-	
+	*/
 
 	return 0;
 }
