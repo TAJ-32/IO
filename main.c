@@ -25,13 +25,14 @@ int main(int argc, char *argv[]) {
 	int y = write(4, buf2, 120);
 	x = read(4, buf2, 160);
 	y = write(4, buf2, 160);
-	x = read(4, buf, 30);
-	y = write(4, buf, 30);
-	x = read(4, buf, 60);
-	y = write(4, buf, 60);
-	x = read(4, buf, 130);
-	//printf("buf: %s\n", buf);
-	y = write(4, buf, 130);
+	x = read(4, buf2, 30);
+	y = write(4, buf2, 30);
+	x = read(4, buf2, 60);
+	y = write(4, buf2, 60);
+	x = read(4, buf2, 130);
+	y = write(4, buf2, 130);
+	x = read(4, buf2, 10);
+	y = read(4, buf2, 10);
 	
 
 	/*
@@ -49,32 +50,20 @@ int main(int argc, char *argv[]) {
 	a = myread(FV3, buf + 120, 160);
 	b = mywrite(FV3, buf + 120, 160);
 	a = myread(FV3, buf + 280, 30);
-
 	b = mywrite(FV3, buf + 280, 30);
-
 	a = myread(FV3, buf + 310, 60);
-
 	b = mywrite(FV3, buf + 310, 60);
-
 	a = myread(FV3, buf + 370, 130);
-	printf("off: %d, act_off: %ld\n", FV3->offset, lseek(FV3->fd, 0, SEEK_CUR));
 	b = mywrite(FV3, buf + 370, 130);
+	a = myread(FV3, buf + 500, 10);
+	b = myread(FV3, buf + 500, 10);
 
 	int c = myclose(FV3);
-//	printf("off: %d, act_off: %ld\n", FV3->offset, lseek(FV3->fd, 0, SEEK_CUR));
 	
-/*	
-	char buf2[256];
+	c = myclose(FV);
+	c = myclose(FV2);
 	
-	int d = myread(FV, buf2, 80);
-	int e = mywrite(FV3, buf2, 80);
-
-	int f = myclose(FV);
-	int g = myclose(FV3);
-
-	printf("a: %d, b:%d, c:%d, d:%d, e:%d, f:%d, g:%d\n", a, b, c, d, e, f, g);
-	*/
-
+	printf("a: %d, b:%d, c: %d, x:%d, y:%d\n", a, c, b, x, y);
 	return 0;
 }
 

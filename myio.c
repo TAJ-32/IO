@@ -256,8 +256,6 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 
 ssize_t myflush(struct FILER *FV) {
 
-	printf("buf offset: %d\n", FV->buf_offset);
-
 	if (FV->bytes_writ != 0) {
 		if (FV->offset == (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1)) {
 			return 1;
