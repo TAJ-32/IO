@@ -20,27 +20,48 @@ int main(int argc, char *argv[]) {
 	char buf2[1024];
 	
 	
-	int x = read(4, buf2, 20);
+	int x = read(4, buf2, 120);
 //	printf("buf2: %s\n", buf2);
-	int y = write(4, buf2, 20);
-	x = read(4, buf2, 60);
-	y = write(4, buf2, 60);
-	//x = read(4, buf, 30);
-	//y = write(4, buf, 30);
+	int y = write(4, buf2, 120);
+	x = read(4, buf2, 160);
+	y = write(4, buf2, 160);
+	x = read(4, buf, 30);
+	y = write(4, buf, 30);
+	x = read(4, buf, 60);
+	y = write(4, buf, 60);
+	x = read(4, buf, 130);
+	//printf("buf: %s\n", buf);
+	y = write(4, buf, 130);
 	
-	
-	
-	int a = myread(FV3, buf, 20);
-//	printf("buf: %s\n h_buf: %s\n\n", buf, FV3->hidden_buf);
-	int b = mywrite(FV3, buf, 20);
-	//printf("buf: %s h_buf: %s\n\n", buf, FV3->hidden_buf);
-	a = myread(FV3, buf + 20, 60);
-	b = mywrite(FV3, buf + 20, 60);
-	//printf("buf: %s\n\n, h_buf: %s, offset: %d, u_offset: %d, bytes_writ: %d, bytes_read: %d\n", buf, FV3->hidden_buf, FV3->offset, FV3->user_offset, FV3->bytes_writ, FV3->bytes_read);
-	//a = myread(FV3, buf + 280, 30);
-	//b = mywrite(FV3, buf + 280, 30);
+
+	/*
+	int x = myread(FV2, buf2, 120);
+	int y = mywrite(FV2, buf2, 120);
+	x = myread(FV2, buf2 + 120, 160);
+	y = mywrite(FV2, buf2 + 120, 160);
+	x = myread(FV2, buf2 + 280, 30);
+	y = mywrite(FV2, buf2 + 280, 30);
+	int d = myclose(FV2);
+	*/
+
+	int a = myread(FV3, buf, 120);
+	int b = mywrite(FV3, buf, 120);
+	a = myread(FV3, buf + 120, 160);
+	b = mywrite(FV3, buf + 120, 160);
+	a = myread(FV3, buf + 280, 30);
+
+	b = mywrite(FV3, buf + 280, 30);
+
+	a = myread(FV3, buf + 310, 60);
+
+	b = mywrite(FV3, buf + 310, 60);
+
+	a = myread(FV3, buf + 370, 130);
+	printf("off: %d, act_off: %ld\n", FV3->offset, lseek(FV3->fd, 0, SEEK_CUR));
+	b = mywrite(FV3, buf + 370, 130);
+
 	int c = myclose(FV3);
-	
+//	printf("off: %d, act_off: %ld\n", FV3->offset, lseek(FV3->fd, 0, SEEK_CUR));
 	
 /*	
 	char buf2[256];
