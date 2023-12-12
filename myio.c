@@ -256,14 +256,22 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 
 ssize_t myflush(struct FILER *FV) {
 
-	if (FV->bytes_writ != 0) {
+	if (FV->bytes_writ != 0 && FV->offset >= FV->buf_size) {
 		if (FV->offset == (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1)) {
 			return 1;
 		}
 	}
 
-	if (write(FV->fd, FV->hidden_buf, FV->buf_size) < 0) {
-		return 1;
+	if (FV->close_flush == true) {
+		if (write(FV->fd, FV->hidden_buf, FV->buf_offset) < 0) {
+			return 1;
+		}
+	}
+	else {
+		if (write(FV->fd, FV->hidden_buf, FV->buf_size) < 0) {
+			return 1;
+		}
+
 	}
 
 	memset(FV->hidden_buf, '\0', FV->buf_size);
@@ -337,6 +345,7 @@ struct FILER *myopen(const char *pathname, int flags, mode_t mode) {
 	FV->user_offset = 0;
 	FV->offset = 0;
 	FV->buf_offset = 0;
+	FV->close_flush = false;
 
 	return FV;
 }
@@ -345,6 +354,7 @@ int myclose(struct FILER *FV) {
 
 	if (FV->bytes_writ > 0){
 		//if still things in the hidden_buf, we flush
+		FV->close_flush = true;
 		myflush(FV); 
 	}
 

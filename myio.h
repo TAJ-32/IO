@@ -20,6 +20,7 @@ struct FILER {
 	int user_offset;
 	int offset;
 	int buf_offset;
+	bool close_flush;
 };
 
 struct FILER *myopen(const char *pathname, int flags, mode_t mode);

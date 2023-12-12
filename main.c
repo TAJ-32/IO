@@ -12,14 +12,18 @@ int main(int argc, char *argv[]) {
 
 	//printf("HELLO: %d\n", FV -> fd);
 
-	struct FILER *FV2 = myopen("/home/sartaj/Assignments/assignment2/Outfile.txt", O_RDWR, 0777);
+	struct FILER *FV2 = myopen("/home/sartaj/Assignments/assignment2/Outfile.txt", O_RDWR | O_CREAT, 0777);
 
 	struct FILER *FV3 = myopen("/home/sartaj/Assignments/assignment2/Outfile2.txt", O_RDWR, 0777);
 
 	char buf[1024];
 	char buf2[1024];
-	
-	
+
+	char buf3[25] = "Hello my name is Sartaj!\0";
+
+	int a = mywrite(FV2, buf3, 25);
+
+/*	
 	int x = read(4, buf2, 120);
 //	printf("buf2: %s\n", buf2);
 	int y = write(4, buf2, 120);
@@ -33,17 +37,6 @@ int main(int argc, char *argv[]) {
 	y = write(4, buf2, 130);
 	x = read(4, buf2, 10);
 	y = read(4, buf2, 10);
-	
-
-	/*
-	int x = myread(FV2, buf2, 120);
-	int y = mywrite(FV2, buf2, 120);
-	x = myread(FV2, buf2 + 120, 160);
-	y = mywrite(FV2, buf2 + 120, 160);
-	x = myread(FV2, buf2 + 280, 30);
-	y = mywrite(FV2, buf2 + 280, 30);
-	int d = myclose(FV2);
-	*/
 
 	int a = myread(FV3, buf, 120);
 	int b = mywrite(FV3, buf, 120);
@@ -57,13 +50,13 @@ int main(int argc, char *argv[]) {
 	b = mywrite(FV3, buf + 370, 130);
 	a = myread(FV3, buf + 500, 10);
 	b = myread(FV3, buf + 500, 10);
-
-	int c = myclose(FV3);
+*/
+	int c = myclose(FV2);
 	
 	c = myclose(FV);
-	c = myclose(FV2);
+	c = myclose(FV3);
 	
-	printf("a: %d, b:%d, c: %d, x:%d, y:%d\n", a, c, b, x, y);
+	//printf("a: %d, c: %d\n", a, c);
 	return 0;
 }
 
