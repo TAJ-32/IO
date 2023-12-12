@@ -8,13 +8,13 @@
 #include "myio.h"
 
 int main(int argc, char *argv[]) {
-	struct FILER *FV = myopen("/home/sartaj/Assignments/assignment2/Testfile.txt", O_RDWR);
+	struct FILER *FV = myopen("/home/sartaj/Assignments/assignment2/Testfile.txt", O_RDWR, 0777);
 
 	//printf("HELLO: %d\n", FV -> fd);
 
-	struct FILER *FV2 = myopen("/home/sartaj/Assignments/assignment2/Outfile.txt", O_RDWR);
+	struct FILER *FV2 = myopen("/home/sartaj/Assignments/assignment2/Outfile.txt", O_RDWR, 0777);
 
-	struct FILER *FV3 = myopen("/home/sartaj/Assignments/assignment2/Outfile2.txt", O_RDWR);
+	struct FILER *FV3 = myopen("/home/sartaj/Assignments/assignment2/Outfile2.txt", O_RDWR, 0777);
 
 	char buf[1024];
 	char buf2[1024];

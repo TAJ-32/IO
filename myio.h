@@ -22,7 +22,7 @@ struct FILER {
 	int buf_offset;
 };
 
-struct FILER *myopen(const char *pathname, int flags);
+struct FILER *myopen(const char *pathname, int flags, mode_t mode);
 
 int myclose(struct FILER *FV);
 

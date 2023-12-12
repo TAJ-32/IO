@@ -304,7 +304,7 @@ off_t myseek(struct FILER *FV, off_t offset, int whence) {
 }
 
 
-struct FILER *myopen(const char *pathname, int flags) {
+struct FILER *myopen(const char *pathname, int flags, mode_t mode) {
 	/*
 	 * Step 1: Create new open file description (not descriptor.
 	 * 						Descriptor refers to the description)
@@ -315,7 +315,7 @@ struct FILER *myopen(const char *pathname, int flags) {
 	struct stat *st = malloc(sizeof(struct stat));
 	stat(pathname, st);
 
-	int fd = open(pathname, flags);
+	int fd = open(pathname, flags, mode);
 
 	if (fd < 0) {
 		return NULL;
