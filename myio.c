@@ -50,18 +50,12 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 
 		int rest_of_hidden = FV->buf_size - FV->buf_offset; //maybe bytes_read
 		
-	//	printf("AHHH: %d %ld\n", FV->offset, lseek(FV->fd, 0, SEEK_CUR));
-
 		//copy the rest of h_buf into buf
 		memcpy(buf, FV->hidden_buf + FV->buf_offset, rest_of_hidden);
 
 		if (FV->bytes_writ > 0) {
 			myflush(FV);
 		}
-
-	//	printf("AHHH pt 2: %d %ld\n", FV->offset, lseek(FV->fd, 0, SEEK_CUR));
-
-
 
 		if (FV->bytes_read == 0) {
 			rest_of_hidden = 0;
@@ -74,8 +68,6 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 		FV->offset += count-rest_of_hidden;
 
 		FV->user_offset += count;
-
-		//printf("offset: %d, actual: %ld\n", FV->offset, lseek(FV->fd, 0, SEEK_CUR));
 
 		memset(FV->hidden_buf, '\0', FV->buf_size); 
 		FV->bytes_read = 0;
@@ -159,6 +151,7 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 	if (count >= FV->buf_size) {
 		int flushed = FV->bytes_writ;
 		if (flushed != 0) {
+			FV->close_flush = true;
 			myflush(FV);
 		}
 		if (FV->bytes_writ != 0) {
@@ -266,6 +259,7 @@ ssize_t myflush(struct FILER *FV) {
 		if (write(FV->fd, FV->hidden_buf, FV->buf_offset) < 0) {
 			return 1;
 		}
+		FV->close_flush = false;
 	}
 	else {
 		if (write(FV->fd, FV->hidden_buf, FV->buf_size) < 0) {

@@ -5,4 +5,4 @@ myio: myio.c
 clean:
 	rm -f myio
 	cp Testfile.txt Outfile.txt
-	cp Testfile.txt Outfile2.txt
+	cp Testfile.txt Outfile2.txt	

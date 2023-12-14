@@ -12,18 +12,26 @@ int main(int argc, char *argv[]) {
 
 	//printf("HELLO: %d\n", FV -> fd);
 
-	struct FILER *FV2 = myopen("/home/sartaj/Assignments/assignment2/Outfile.txt", O_RDWR | O_CREAT, 0777);
+	struct FILER *FV2 = myopen("/home/sartaj/Assignments/assignment2/Outfile.txt", O_RDWR, 0777);
 
 	struct FILER *FV3 = myopen("/home/sartaj/Assignments/assignment2/Outfile2.txt", O_RDWR, 0777);
 
 	char buf[1024];
 	char buf2[1024];
 
-	char buf3[25] = "Hello my name is Sartaj!\0";
+	char buf3[25] = "The Nara period was chara";
+	char buf4[120] = "cterized by several developments in Japanese culture and politics. Most specifically, its adoption of Confucian ideas wi";
 
-	int a = mywrite(FV2, buf3, 25);
+/*
+	int y = write(FV2->fd, buf3, 25);
+	y = write(FV2->fd, buf4, 120);
 
-/*	
+	int b = mywrite(FV3, buf3, 25);
+	b = mywrite(FV3, buf4, 120);
+*/
+
+
+	
 	int x = read(4, buf2, 120);
 //	printf("buf2: %s\n", buf2);
 	int y = write(4, buf2, 120);
@@ -50,7 +58,7 @@ int main(int argc, char *argv[]) {
 	b = mywrite(FV3, buf + 370, 130);
 	a = myread(FV3, buf + 500, 10);
 	b = myread(FV3, buf + 500, 10);
-*/
+
 	int c = myclose(FV2);
 	
 	c = myclose(FV);
