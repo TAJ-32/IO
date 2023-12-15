@@ -1,11 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <stdbool.h>
-#include <string.h>
 #include "myio.h"
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 int main(int argc, char *argv[]) {
 	struct FILER *FV = myopen("/home/sartaj/Assignments/assignment2/Testfile.txt", O_RDWR, 0777);
@@ -16,19 +13,18 @@ int main(int argc, char *argv[]) {
 
 	struct FILER *FV3 = myopen("/home/sartaj/Assignments/assignment2/Outfile2.txt", O_RDWR, 0777);
 
+	/*
 	char buf[1024];
 	char buf2[1024];
 
 	char buf3[25] = "The Nara period was chara";
 	char buf4[120] = "cterized by several developments in Japanese culture and politics. Most specifically, its adoption of Confucian ideas wi";
 
-/*
 	int y = write(FV2->fd, buf3, 25);
 	y = write(FV2->fd, buf4, 120);
 
 	int b = mywrite(FV3, buf3, 25);
 	b = mywrite(FV3, buf4, 120);
-*/
 
 
 	
@@ -58,13 +54,14 @@ int main(int argc, char *argv[]) {
 	b = mywrite(FV3, buf + 370, 130);
 	a = myread(FV3, buf + 500, 10);
 	b = myread(FV3, buf + 500, 10);
-
+*/
 	int c = myclose(FV2);
 	
 	c = myclose(FV);
 	c = myclose(FV3);
 	
-	//printf("a: %d, c: %d\n", a, c);
+	
+	printf("c: %d\n", c);
 	return 0;
 }
 

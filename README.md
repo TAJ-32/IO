@@ -2,3 +2,6 @@ There are still some issues with include statements because we are not sure why 
 
 All of our read/write functionality works as do our lseek and close functions. Flush is called within close because it was the only way
 to make sure the user got what they requested eventually without them explicitly calling myflush.
+
+
+https://stackoverflow.com/questions/35026910/malloc-error-checking-methods

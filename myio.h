@@ -3,6 +3,8 @@
 
 #define BUF_SIZE 100
 
+#include <stdlib.h>
+#include <stdbool.h>
 
 struct FILER {
 	int fd;
