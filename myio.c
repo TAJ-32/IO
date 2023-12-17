@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 #include <string.h>
+#include <errno.h>
 
 ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many bytes we are reading	
 	//if a WRONLY is specified.
@@ -29,7 +30,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 	if (count >= FV->buf_size) {
 		if (FV->not_read_yet) {
 			if (read(FV->fd, buf, count) < 0) {
-				return 1;
+				return -1;
 			}
 			FV->bytes_read_tot += count;
 			FV->offset += count;
@@ -50,7 +51,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 			rest_of_hidden = 0;
 		}
 		if (read(FV->fd, (char *) buf + rest_of_hidden, count-rest_of_hidden) < 0) {
-			return 1;
+			return -1;
 	
 		}
 		FV->bytes_read_tot += count;
@@ -67,7 +68,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 	//if first read, we want to do the actual read syscall
 	if (FV->not_read_yet) {
 		if (read(FV->fd, FV->hidden_buf, FV->buf_size) < 0) {
-			return 1;
+			return -1;
 		}
 		memcpy(buf, FV->hidden_buf, count);
 		FV->bytes_read += count;
@@ -95,7 +96,7 @@ ssize_t myread(struct FILER *FV, void *buf, size_t count) { //count is how many 
 
 		memset(FV->hidden_buf, '\0', FV->buf_size);
 		if (read(FV->fd, FV->hidden_buf, FV->buf_size) < 0) {
-			return 1;
+			return -1;
 		}
 		
 		int carryover = count - leftovers;
@@ -137,12 +138,12 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 		}
 		if (FV->bytes_writ != 0) {
 			if (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1) {
-				return 1;
+				return -1;
 			}
 		}
 
 		if (write(FV->fd, (char *) buf, count) < 0) {
-			return 1;
+			return -1;
 		}
 		FV->bytes_writ_tot += count - flushed;
 		FV->offset += count;
@@ -169,12 +170,12 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 		//write what is in the hidden_buf to the file
 		if (FV->bytes_writ != 0) {
 			if (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1) {
-				return 1;
+				return -1;
 			}
 		}
 
 		if (write(FV->fd, (char *) buf, FV->buf_size) < 0) {
-			return 1;
+			return -1;
 		}
 
 		memset(FV->hidden_buf, '\0', FV->buf_size); 
@@ -211,12 +212,12 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 	if (FV->bytes_writ_tot == FV->size && FV->not_writ_yet == false) { 
 		if (FV->bytes_writ != 0) {
 			if (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1) {
-				return 1;
+				return -1;
 			}
 		}
 
 		if (write(FV->fd, (char *) buf, count) < 0) {
-			return 1;
+			return -1;
 		}
 		FV->user_offset += count;
 		FV->offset += count;
@@ -227,19 +228,19 @@ ssize_t mywrite(struct FILER *FV, void *buf, size_t count) {
 ssize_t myflush(struct FILER *FV) {
 	if (FV->bytes_writ != 0 && FV->offset >= FV->buf_size) {
 		if (FV->offset == (lseek(FV->fd, -1*FV->buf_size, SEEK_CUR) < (off_t) -1)) {
-			return 1;
+			return -1;
 		}
 	}
 
 	if (FV->close_flush == true) {
 		if (write(FV->fd, FV->hidden_buf, FV->buf_offset) < 0) {
-			return 1;
+			return -1;
 		}
 		FV->close_flush = false;
 	}
 	else {
 		if (write(FV->fd, FV->hidden_buf, FV->buf_size) < 0) {
-			return 1;
+			return -1;
 		}
 	}
 
@@ -257,7 +258,7 @@ ssize_t myflush(struct FILER *FV) {
 off_t myseek(struct FILER *FV, off_t offset, int whence) {
 	if (whence == SEEK_SET) {
 		if (lseek(FV->fd, offset, SEEK_SET) < (off_t) -1) {
-			return 1;
+			return -1;
 		}
 		FV->offset = offset;
 		FV->user_offset = offset;
@@ -265,7 +266,7 @@ off_t myseek(struct FILER *FV, off_t offset, int whence) {
 	}
 	else if (whence == SEEK_CUR) {
 		if (lseek(FV->fd, FV->user_offset + offset, SEEK_SET) < (off_t) -1) {
-			return 1;
+			return -1;
 		}	
 		FV->offset = FV->user_offset + offset;
 		FV->user_offset += offset;
@@ -278,27 +279,28 @@ off_t myseek(struct FILER *FV, off_t offset, int whence) {
 
 
 struct FILER *myopen(const char *pathname, int flags, mode_t mode) {
-	struct stat *st = malloc(sizeof(struct stat));
-	stat(pathname, st);
+	struct stat st;
+	if ((stat(pathname, &st)) < 0) {
+		return NULL;
+	}
 
 	int fd = open(pathname, flags, mode);
 
 	if (fd < 0) {
-		perror("open() error");
 		return NULL;
 	}
 
 	struct FILER *FV = malloc(sizeof(struct FILER)); //check if malloc doesn't fail
 	if (FV == NULL) {
-		perror("malloc() error");
-		abort();
+		errno = ENOMEM;
+		return NULL;
 	}
 	FV->fd = fd;
 	FV->buf_size = BUF_SIZE; 
 	FV->hidden_buf = malloc(FV->buf_size); 
 	if (FV->hidden_buf == NULL) {
-		perror("malloc() error");
-		abort();
+		errno = ENOMEM;
+		return NULL;
 	}
 	FV->bytes_read = 0;
 	FV->bytes_read_tot = 0;
@@ -308,7 +310,7 @@ struct FILER *myopen(const char *pathname, int flags, mode_t mode) {
 	FV->not_read_yet = true;
 	FV->not_writ_yet = true;
 	FV->flags = flags;
-	FV->size = st->st_size;
+	FV->size = st.st_size;
 	FV->user_offset = 0;
 	FV->offset = 0;
 	FV->buf_offset = 0;
@@ -330,7 +332,6 @@ int myclose(struct FILER *FV) {
 	free(FV);
 
 	if (n < 0) {
-		perror("close() error");
 		return -1;
 	}
 	return n;
